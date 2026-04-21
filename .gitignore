@@ -1,0 +1,39 @@
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Node/Next (workspace root and nested apps)
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+dist/
+build/
+coverage/
+
+# Vercel
+.vercel/
+**/.vercel/
+
+# Local app data (runtime persistence)
+frontend/.data/
+frontend/.data/*
+
+# Misc temp
+*.tmp
+*.swp
