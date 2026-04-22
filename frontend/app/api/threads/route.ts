@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createThread, getGroupedThreads, type ThreadStatus } from "@/lib/server/thread-store";
 import { createThreadSchema, errorResponse } from "@/lib/server/validation";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 
 export async function GET(request: NextRequest) {
+  const proxied = await proxyRequestToCoreBackend({
+    request,
+    path: "/api/v1/threads",
+    method: "GET",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const grouped = request.nextUrl.searchParams.get("grouped") === "true";
 
   if (grouped) {
@@ -16,6 +26,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const proxied = await proxyRequestToCoreBackend({
+    request: request.clone(),
+    path: "/api/v1/threads",
+    method: "POST",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const rawBody = await request.json().catch(() => null);
   if (!rawBody) {
     return errorResponse("Invalid payload", 400);

@@ -118,7 +118,94 @@ Implemented routes:
 - Map ThreadRecord shape to DB schema
 - Add migration readiness checks
 
-## 10) Source-of-Truth Files in frontend/
+## 10) Core Backend Plan (FastAPI + Strangler)
+
+This section is the active implementation plan for moving from backend-in-Next to a dedicated core backend without breaking frontend behavior.
+
+Architecture decisions:
+- Runtime: FastAPI (Python)
+- Migration mode: Strangler pattern (existing Next routes stay stable, internally proxy to backend)
+- Blueprint depth: Full five-engine backend roadmap with milestone gates
+- Safety rule: Contract parity is mandatory before any route cutover
+
+### Phase A Kickoff (Exact Order)
+
+1. Contract freeze
+- Capture current request/response/error shapes for:
+	- threads
+	- clarify-draft
+	- pressure-test (generate, answer, skip)
+	- simulation (latest, run, history)
+	- decision-output
+	- failure-analysis
+- This becomes the do-not-break baseline.
+
+2. Backend folder and minimal skeleton
+- Add a backend service folder with:
+	- FastAPI app bootstrap
+	- config and environment loading
+	- health route
+	- structured logging
+- Keep this minimal and runnable first.
+
+3. Proxy path from existing API layer
+- Frontend continues to call the same endpoints in frontend/app/api.
+- Route handlers proxy to backend only when feature flag is enabled.
+- Local fallback remains available until parity is proven.
+
+4. First vertical slice
+- Migrate only threads create/list first.
+- Validate parity on status code and payload shape before touching clarify, pressure, simulation, decision-output, or failure-analysis.
+
+5. Boundary parity tests
+- Add or extend tests to assert old-vs-proxy behavior parity for each migrated endpoint.
+- Cut over endpoint-by-endpoint, not all at once.
+
+### FastAPI Workflow (How Work Proceeds)
+
+1. Define contract for one endpoint.
+2. Implement backend handler and service logic.
+3. Add or update proxy route in Next.
+4. Run parity tests and manual smoke checks.
+5. Enable feature flag for that endpoint.
+6. Soak, monitor, then continue.
+
+## 11) Full Five-Engine Blueprint (Backend Roadmap)
+
+Engine 1: Extraction
+- 3-pass pipeline + validation + enrichment + consistency checks
+- Persist extraction schema and memory index hooks
+
+Engine 2: Pressure Test
+- Scenario generation from assumptions and risks
+- Re-entry mode for pattern-targeted harder scenarios
+
+Engine 3: Simulation
+- Start with deterministic parity mode
+- Introduce Monte Carlo mode behind feature flags
+
+Engine 4: Scoring
+- Distribution aggregation, scoring, confidence, sensitivity hooks
+- Feed decision-output synthesis from simulation artifacts
+
+Engine 5: Failure Analysis
+- Failure intake, gap analysis, lesson extraction, pattern profile
+- Re-entry context composer into extraction/pressure-test
+
+Supporting layer: Memory
+- Hybrid retrieval (semantic + category + recency)
+- Governance on writes: quality thresholds, dedupe, confidence gates
+
+## 12) Migration Safety Gates
+
+Must pass before expanding cutover:
+- Contract parity: frontend behavior unchanged for migrated endpoint.
+- Test gate: route and domain tests green.
+- Data gate: no malformed or orphaned records.
+- Performance gate: latency and reliability within expected limits.
+- Rollback gate: feature flag can disable proxy path immediately.
+
+## 13) Source-of-Truth Files in frontend/
 
 - app/page.tsx: dashboard orchestration
 - components/dashboard/*: stage UI components
@@ -127,7 +214,7 @@ Implemented routes:
 - lib/server/thread-store.ts: current server-side state + domain logic
 - .data/threads.json: local persisted state
 
-## 11) How To Run
+## 14) How To Run
 
 From frontend/:
 
@@ -137,7 +224,7 @@ From frontend/:
 - Start production build: npm run start
 - Lint: npm run lint
 
-## 12) Stability and Quality Gates Before Backend Extraction
+## 15) Stability and Quality Gates Before Backend Extraction
 
 Must be green before splitting backend service:
 - Autosave network churn reduced
@@ -145,15 +232,15 @@ Must be green before splitting backend service:
 - Deterministic validation responses for invalid payloads
 - Basic automated tests passing for core routes/store
 
-## 13) Resume Handoff Prompt (Copy/Paste)
+## 16) Resume Handoff Prompt (Copy/Paste)
 
 "Read README.md at workspace root and frontend/README.md first. Then continue from Immediate Priorities section, starting with autosave stabilization in app/page.tsx and components/dashboard/clarify-form.tsx. Validate by reducing repeated clarify PUT + grouped threads GET churn while preserving save correctness."
 
-## 14) Project Intent Snapshot
+## 17) Project Intent Snapshot
 
 Eidoz is being built as a learning-intensive, hands-on product where correctness of stage wiring, deterministic behavior, and iterative reliability matter more than premature scaling.
 
-## 15) Change Log
+## 18) Change Log
 
 ### 2026-04-20
 - Added root project context README.
@@ -162,3 +249,8 @@ Eidoz is being built as a learning-intensive, hands-on product where correctness
 - Stabilized clarify autosave flow to reduce duplicate saves and removed grouped-thread refresh from autosave path.
 - Added centralized route payload schemas and stricter validation for thread create, clarify save, pressure answer/skip, simulation, and failure-analysis endpoints.
 - Verified frontend build passes after changes.
+
+### 2026-04-21
+- Added core backend migration plan to this README.
+- Locked architecture decisions: FastAPI runtime, strangler migration, full five-engine roadmap.
+- Added Phase A kickoff order and migration safety gates.
