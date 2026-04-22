@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getThreadById, saveClarifyDraft, type ClarifyDraft } from "@/lib/server/thread-store";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 import { clarifyDraftSchema, errorResponse } from "@/lib/server/validation";
 
 interface Params {
@@ -8,6 +9,16 @@ interface Params {
 
 export async function GET(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: _,
+    path: `/api/v1/threads/${threadId}/clarify-draft`,
+    method: "GET",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const thread = await getThreadById(threadId);
 
   if (!thread) {
@@ -19,6 +30,16 @@ export async function GET(_: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: request.clone(),
+    path: `/api/v1/threads/${threadId}/clarify-draft`,
+    method: "PUT",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const body = (await request.json().catch(() => null)) as ClarifyDraft | null;
 
   if (!body) {

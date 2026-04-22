@@ -89,3 +89,48 @@ def create_thread(payload: dict[str, Any]) -> dict[str, Any]:
     data["threads"].insert(0, thread)
     _write_store(data)
     return thread
+
+
+def get_thread_by_id(thread_id: str) -> dict[str, Any] | None:
+    data = _read_store()
+    for thread in data["threads"]:
+        if thread.get("id") == thread_id:
+            return thread
+    return None
+
+
+def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str, Any] | None:
+    data = _read_store()
+
+    for idx, thread in enumerate(data["threads"]):
+        if thread.get("id") != thread_id:
+            continue
+
+        was_failed = thread.get("status") == "failed"
+        title = str(draft.get("title") or "").strip()
+
+        updated_thread = {
+            **thread,
+            "status": "active" if was_failed else thread.get("status"),
+            "title": title or thread.get("title"),
+            "clarifyDraft": {
+                "title": str(draft.get("title") or ""),
+                "coreProblem": str(draft.get("coreProblem") or ""),
+                "desiredOutcome": str(draft.get("desiredOutcome") or ""),
+                "context": str(draft.get("context") or ""),
+                "constraints": list(draft.get("constraints") or []),
+                "assumptions": list(draft.get("assumptions") or []),
+            },
+            "updatedAt": _now_iso(),
+        }
+
+        # Clarify edits invalidate derived artifacts to force recomputation.
+        updated_thread.pop("pressureTest", None)
+        updated_thread.pop("simulationRuns", None)
+        updated_thread.pop("failureAnalysis", None)
+
+        data["threads"][idx] = updated_thread
+        _write_store(data)
+        return updated_thread
+
+    return None
