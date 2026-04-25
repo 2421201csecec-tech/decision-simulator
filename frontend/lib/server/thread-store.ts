@@ -180,6 +180,11 @@ export interface GroupedThreads {
   history: ThreadRecord[];
 }
 
+export async function getAllThreads(): Promise<ThreadRecord[]> {
+  const data = await readStore();
+  return data.threads;
+}
+
 export async function getGroupedThreads(): Promise<GroupedThreads> {
   const data = await readStore();
   const grouped: GroupedThreads = {

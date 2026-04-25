@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDecisionOutputData } from "@/lib/server/thread-store";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 
 interface Params {
   params: Promise<{ threadId: string }>;
@@ -7,6 +8,16 @@ interface Params {
 
 export async function GET(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: _,
+    path: `/api/v1/threads/${threadId}/decision-output`,
+    method: "GET",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const output = await getDecisionOutputData(threadId);
 
   if (!output) {

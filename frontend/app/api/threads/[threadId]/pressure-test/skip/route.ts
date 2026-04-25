@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPressureTest, skipPressureScenario } from "@/lib/server/thread-store";
 import { errorResponse, pressureSkipSchema } from "@/lib/server/validation";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 
 interface Params {
   params: Promise<{ threadId: string }>;
@@ -8,6 +9,16 @@ interface Params {
 
 export async function POST(request: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: request.clone(),
+    path: `/api/v1/threads/${threadId}/pressure-test/skip`,
+    method: "POST",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const body = (await request.json().catch(() => null)) as unknown;
 
   const parsed = pressureSkipSchema.safeParse(body);

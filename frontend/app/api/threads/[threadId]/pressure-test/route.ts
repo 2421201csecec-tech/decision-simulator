@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generatePressureTest, getPressureTest } from "@/lib/server/thread-store";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 
 interface Params {
   params: Promise<{ threadId: string }>;
@@ -7,6 +8,16 @@ interface Params {
 
 export async function GET(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: _,
+    path: `/api/v1/threads/${threadId}/pressure-test`,
+    method: "GET",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const pressureTest = await getPressureTest(threadId);
 
   if (!pressureTest) {
@@ -18,6 +29,16 @@ export async function GET(_: NextRequest, { params }: Params) {
 
 export async function POST(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: _,
+    path: `/api/v1/threads/${threadId}/pressure-test`,
+    method: "POST",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const thread = await generatePressureTest(threadId);
 
   if (!thread) {

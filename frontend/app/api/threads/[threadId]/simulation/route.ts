@@ -4,6 +4,7 @@ import {
   runSimulation,
 } from "@/lib/server/thread-store";
 import { errorResponse, simulationVariablesSchema } from "@/lib/server/validation";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 
 interface Params {
   params: Promise<{ threadId: string }>;
@@ -11,6 +12,16 @@ interface Params {
 
 export async function GET(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: _,
+    path: `/api/v1/threads/${threadId}/simulation`,
+    method: "GET",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const run = await getLatestSimulation(threadId);
 
   if (!run) {
@@ -22,6 +33,16 @@ export async function GET(_: NextRequest, { params }: Params) {
 
 export async function POST(request: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: request.clone(),
+    path: `/api/v1/threads/${threadId}/simulation`,
+    method: "POST",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const body = (await request.json().catch(() => null)) as unknown;
 
   if (!body) {

@@ -39,7 +39,6 @@ async def get_clarify_draft(thread_id: str) -> JSONResponse:
         }
     )
 
-
 @router.put("/threads/{thread_id}/clarify-draft")
 async def put_clarify_draft(thread_id: str, request: Request) -> JSONResponse:
     raw_body = await request.body()

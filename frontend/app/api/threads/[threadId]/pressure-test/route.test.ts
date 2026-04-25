@@ -1,10 +1,126 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { withTempCwd } from "@/test-utils/with-temp-cwd";
+
+const ORIGINAL_ENV = { ...process.env };
+
+afterEach(() => {
+  process.env = { ...ORIGINAL_ENV };
+  vi.restoreAllMocks();
+});
 
 function params(threadId: string) {
   return { params: Promise.resolve({ threadId }) };
 }
+
+describe("pressure-test proxy contracts", () => {
+  it("proxies GET to core backend when proxy flag is enabled", async () => {
+    await withTempCwd(async () => {
+      process.env.ENABLE_CORE_BACKEND_PROXY = "true";
+      process.env.CORE_BACKEND_URL = "http://127.0.0.1:8000";
+
+      const backendBody = {
+        pressureTest: { scenarios: [], currentIndex: 0, responses: {}, completed: false, updatedAt: "2026-01-01T00:00:00Z" },
+      };
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(backendBody), { status: 200, headers: { "content-type": "application/json" } })
+      );
+
+      vi.resetModules();
+      const route = await import("./route");
+      const response = await route.GET(
+        new NextRequest("http://localhost/api/threads/t1/pressure-test"),
+        params("t1")
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual(backendBody);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000/api/v1/threads/t1/pressure-test",
+        expect.objectContaining({ method: "GET" })
+      );
+    });
+  });
+
+  it("proxies POST to core backend when proxy flag is enabled", async () => {
+    await withTempCwd(async () => {
+      process.env.ENABLE_CORE_BACKEND_PROXY = "true";
+      process.env.CORE_BACKEND_URL = "http://127.0.0.1:8000";
+
+      const backendBody = {
+        pressureTest: { scenarios: [], currentIndex: 0, responses: {}, completed: false, updatedAt: "2026-01-01T00:00:00Z" },
+      };
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(backendBody), { status: 200, headers: { "content-type": "application/json" } })
+      );
+
+      vi.resetModules();
+      const route = await import("./route");
+      const response = await route.POST(
+        new NextRequest("http://localhost/api/threads/t1/pressure-test", { method: "POST" }),
+        params("t1")
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual(backendBody);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://127.0.0.1:8000/api/v1/threads/t1/pressure-test",
+        expect.objectContaining({ method: "POST" })
+      );
+    });
+  });
+
+  it("falls back to local store for GET when proxy is unavailable", async () => {
+    await withTempCwd(async () => {
+      process.env.ENABLE_CORE_BACKEND_PROXY = "true";
+      process.env.CORE_BACKEND_URL = "http://127.0.0.1:8000";
+
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("backend unavailable"));
+
+      vi.resetModules();
+      const route = await import("./route");
+      const store = await import("@/lib/server/thread-store");
+      const thread = await store.createThread({ title: "Fallback Thread" });
+      await store.generatePressureTest(thread.id);
+
+      const response = await route.GET(
+        new NextRequest("http://localhost/api/threads/x/pressure-test"),
+        params(thread.id)
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.pressureTest).toBeDefined();
+    });
+  });
+
+  it("falls back to local store for POST when proxy is unavailable", async () => {
+    await withTempCwd(async () => {
+      process.env.ENABLE_CORE_BACKEND_PROXY = "true";
+      process.env.CORE_BACKEND_URL = "http://127.0.0.1:8000";
+
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("backend unavailable"));
+
+      vi.resetModules();
+      const route = await import("./route");
+      const store = await import("@/lib/server/thread-store");
+      const thread = await store.createThread({ title: "Fallback Generate" });
+
+      const response = await route.POST(
+        new NextRequest("http://localhost/api/threads/x/pressure-test", { method: "POST" }),
+        params(thread.id)
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.pressureTest.scenarios.length).toBeGreaterThan(0);
+    });
+  });
+});
 
 describe("pressure-test answer and skip contracts", () => {
   it("returns 400 for malformed answer payload", async () => {

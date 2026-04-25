@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getFailureAnalysis, saveFailureAnalysis } from "@/lib/server/thread-store";
 import { errorResponse, failureAnalysisSchema } from "@/lib/server/validation";
+import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
 
 interface Params {
   params: Promise<{ threadId: string }>;
@@ -8,6 +9,16 @@ interface Params {
 
 export async function GET(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: _,
+    path: `/api/v1/threads/${threadId}/failure-analysis`,
+    method: "GET",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const failureAnalysis = await getFailureAnalysis(threadId);
 
   if (!failureAnalysis) {
@@ -19,6 +30,16 @@ export async function GET(_: NextRequest, { params }: Params) {
 
 export async function PUT(request: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  const proxied = await proxyRequestToCoreBackend({
+    request: request.clone(),
+    path: `/api/v1/threads/${threadId}/failure-analysis`,
+    method: "PUT",
+  });
+  if (proxied) {
+    return proxied;
+  }
+
   const body = (await request.json().catch(() => null)) as unknown;
 
   if (!body) {
@@ -38,7 +59,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   });
 
   if (!saved) {
-    return NextResponse.json({ message: "Thread not found" }, { status: 404 });
+    return errorResponse("Thread not found", 404);
   }
 
   return NextResponse.json({ failureAnalysis: saved });
