@@ -4,6 +4,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import settings
 
+# The engine is created at the module level to be shared across the application.
+# It is configured based on the database URL from settings, with special handling for 
+# PostgreSQL to ensure SSL and compatibility with PgBouncer if used.
 
 def _build_engine():
     url = settings.database_url
