@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.routes.clarify_draft import router as clarify_draft_router
+from app.extraction.api import router as extraction_router
 from app.api.routes.decision_output import router as decision_output_router
 from app.api.routes.export import router as export_router
 from app.api.routes.failure_analysis import router as failure_analysis_router
@@ -35,3 +36,4 @@ app.include_router(simulation_router, prefix="/api/v1")
 app.include_router(decision_output_router, prefix="/api/v1")
 app.include_router(failure_analysis_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
+app.include_router(extraction_router, prefix="/api/v1")

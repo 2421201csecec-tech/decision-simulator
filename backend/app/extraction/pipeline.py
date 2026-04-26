@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import logging
 from typing import Any
@@ -8,6 +9,7 @@ from uuid import uuid4
 from app.config import settings
 from app.extraction.consistency.checker import run_checks
 from app.extraction.enrichment.enricher import Enricher
+from app.extraction.memory.writer import should_store, write_extraction_to_memory
 from app.extraction.passes.pass1_intent import run_pass1, PassParseError
 from app.extraction.passes.pass2_variables import run_pass2
 from app.extraction.passes.pass3_risks import run_pass3
@@ -256,7 +258,7 @@ async def run_extraction(
     # Final validation pass (captures any enrichment-introduced issues as warnings)
     final_vr = validator.validate(schema)
 
-    return {
+    result = {
         **schema,
         "schema_version": "1.1.0",
         "confidence": confidence.model_dump(),
@@ -269,6 +271,12 @@ async def run_extraction(
         "consistency_report": consistency_report.model_dump(),
         "telemetry": TelemetrySummary(enrichment_applied=enrichment_ran).model_dump(),
     }
+
+    # Fire-and-forget memory write — never blocks the response
+    if should_store(result):
+        asyncio.create_task(write_extraction_to_memory(result))
+
+    return result
 
 
 def _which_pass_failed(hard_errors: list[dict]) -> int:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -84,3 +84,13 @@ class PatternProfile(Base):
     patterns = Column(JSON, nullable=False, default=list)
     updated_at = Column(DateTime(timezone=True), nullable=False)
     version = Column(Integer, nullable=False, default=1)
+
+
+class ExtractionMemory(Base):
+    __tablename__ = "extraction_memory"
+
+    id = Column(String, primary_key=True)
+    decision_category = Column(String, nullable=True, index=True)
+    overall_confidence = Column(Float, nullable=False)
+    schema_json = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, index=True)

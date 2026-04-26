@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from app.config import settings
 from app.extraction.schemas import generate_variable_id
 from app.extraction.telemetry.emitter import emit_pass
 from .llm_client import call_llm, LLMError
+
+logger = logging.getLogger("extraction.pass2")
 
 _PROMPT_DIR = Path(__file__).parent.parent / "prompts"
 _PASS_NUM = 2
@@ -36,6 +39,43 @@ def _inject_variable_ids(variables: list[dict]) -> list[dict]:
         else:
             seen[base_id] = 1
             var["variable_id"] = base_id
+    return variables
+
+
+def _break_cycles(variables: list[dict]) -> list[dict]:
+    """Remove affects[] edges that form cycles. LLMs often get causal direction wrong."""
+    try:
+        import networkx as nx
+    except ImportError:
+        return variables
+
+    id_to_var = {v["variable_id"]: v for v in variables if v.get("variable_id")}
+    G = nx.DiGraph()
+    for var in variables:
+        vid = var.get("variable_id")
+        if vid:
+            G.add_node(vid)
+            for target in var.get("affects", []):
+                G.add_edge(vid, target)
+
+    removed = []
+    while True:
+        cycles = list(nx.simple_cycles(G))
+        if not cycles:
+            break
+        cycle = cycles[0]
+        # Remove the last edge in the cycle (u → cycle[0])
+        u, v = cycle[-1], cycle[0]
+        G.remove_edge(u, v)
+        removed.append((u, v))
+
+    if removed:
+        logger.info("cycle-breaker removed %d affects[] edge(s): %s", len(removed), removed)
+        for var in variables:
+            vid = var.get("variable_id")
+            if vid and vid in id_to_var:
+                var["affects"] = list(G.successors(vid))
+
     return variables
 
 
@@ -109,4 +149,5 @@ async def run_pass2(
 
     variables = _inject_variable_ids(variables)
     variables = _translate_affects_to_ids(variables)
+    variables = _break_cycles(variables)
     return variables
