@@ -21,7 +21,7 @@ class CreateThreadPayload(BaseModel):
 
 @router.get("/threads")
 async def list_threads(grouped: bool = Query(default=False)) -> JSONResponse:
-    grouped_threads = get_grouped_threads()
+    grouped_threads = await get_grouped_threads()
     if grouped:
         return JSONResponse(grouped_threads)
 
@@ -55,7 +55,7 @@ async def create_threads(request: Request) -> JSONResponse:
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    thread = create_thread(
+    thread = await create_thread(
         {
             "title": parsed.title,
             "parentThreadId": str(parsed.parentThreadId) if parsed.parentThreadId else None,

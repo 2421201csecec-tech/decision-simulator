@@ -28,7 +28,7 @@ class PressureSkipPayload(BaseModel):
 
 @router.get("/threads/{thread_id}/pressure-test")
 async def get_pressure(thread_id: str) -> JSONResponse:
-    pressure_test = get_pressure_test(thread_id)
+    pressure_test = await get_pressure_test(thread_id)
     if not pressure_test:
         return JSONResponse({"message": "Pressure test not found"}, status_code=404)
     return JSONResponse({"pressureTest": pressure_test})
@@ -36,7 +36,7 @@ async def get_pressure(thread_id: str) -> JSONResponse:
 
 @router.post("/threads/{thread_id}/pressure-test")
 async def post_pressure(thread_id: str) -> JSONResponse:
-    thread = generate_pressure_test(thread_id)
+    thread = await generate_pressure_test(thread_id)
     if not thread:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"pressureTest": thread.get("pressureTest")})
@@ -57,7 +57,7 @@ async def post_pressure_answer(thread_id: str, request: Request) -> JSONResponse
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    existing = get_pressure_test(thread_id)
+    existing = await get_pressure_test(thread_id)
     if not existing:
         return JSONResponse({"message": "Pressure test not found"}, status_code=404)
 
@@ -69,7 +69,7 @@ async def post_pressure_answer(thread_id: str, request: Request) -> JSONResponse
     if current_scenario.get("id") != parsed.scenarioId:
         return JSONResponse({"message": "Scenario does not match current pressure-test step"}, status_code=409)
 
-    pressure_test = submit_pressure_answer(thread_id, parsed.scenarioId, parsed.answer)
+    pressure_test = await submit_pressure_answer(thread_id, parsed.scenarioId, parsed.answer)
     if not pressure_test:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
 
@@ -91,7 +91,7 @@ async def post_pressure_skip(thread_id: str, request: Request) -> JSONResponse:
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    existing = get_pressure_test(thread_id)
+    existing = await get_pressure_test(thread_id)
     if not existing:
         return JSONResponse({"message": "Pressure test not found"}, status_code=404)
 
@@ -103,7 +103,7 @@ async def post_pressure_skip(thread_id: str, request: Request) -> JSONResponse:
     if current_scenario.get("id") != parsed.scenarioId:
         return JSONResponse({"message": "Scenario does not match current pressure-test step"}, status_code=409)
 
-    pressure_test = skip_pressure_scenario(thread_id, parsed.scenarioId)
+    pressure_test = await skip_pressure_scenario(thread_id, parsed.scenarioId)
     if not pressure_test:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
 

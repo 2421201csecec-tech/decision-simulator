@@ -28,7 +28,7 @@ class ClarifyDraftPayload(BaseModel):
 
 @router.get("/threads/{thread_id}/clarify-draft")
 async def get_clarify_draft(thread_id: str) -> JSONResponse:
-    thread = get_thread_by_id(thread_id)
+    thread = await get_thread_by_id(thread_id)
     if not thread:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
 
@@ -60,7 +60,7 @@ async def put_clarify_draft(thread_id: str, request: Request) -> JSONResponse:
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    saved = save_clarify_draft(
+    saved = await save_clarify_draft(
         thread_id,
         {
             "title": parsed.title,

@@ -37,3 +37,9 @@ frontend/.data/*
 # Misc temp
 *.tmp
 *.swp
+
+# Python backend
+**/__pycache__/
+*.pyc
+backend/.venv/
+backend/dev.db

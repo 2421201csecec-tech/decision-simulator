@@ -21,7 +21,7 @@ class SimulationVariablesPayload(BaseModel):
 
 @router.get("/threads/{thread_id}/simulation")
 async def get_simulation(thread_id: str) -> JSONResponse:
-    run = get_latest_simulation(thread_id)
+    run = await get_latest_simulation(thread_id)
     if run is None:
         return JSONResponse({"message": "Simulation run not found"}, status_code=404)
     return JSONResponse({"run": run})
@@ -48,7 +48,7 @@ async def post_simulation(thread_id: str, request: Request) -> JSONResponse:
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    run = run_simulation(
+    run = await run_simulation(
         thread_id,
         {
             "price": parsed.price,
@@ -66,7 +66,7 @@ async def post_simulation(thread_id: str, request: Request) -> JSONResponse:
 
 @router.get("/threads/{thread_id}/simulation/history")
 async def get_simulation_history_route(thread_id: str) -> JSONResponse:
-    runs = get_simulation_history(thread_id)
+    runs = await get_simulation_history(thread_id)
     if runs is None:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"runs": runs})

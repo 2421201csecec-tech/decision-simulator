@@ -26,7 +26,7 @@ class FailureAnalysisPayload(BaseModel):
 
 @router.get("/threads/{thread_id}/failure-analysis")
 async def get_failure_analysis_route(thread_id: str) -> JSONResponse:
-    failure_analysis = get_failure_analysis(thread_id)
+    failure_analysis = await get_failure_analysis(thread_id)
     if failure_analysis is None:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"failureAnalysis": failure_analysis})
@@ -53,7 +53,7 @@ async def put_failure_analysis(thread_id: str, request: Request) -> JSONResponse
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    saved = save_failure_analysis(
+    saved = await save_failure_analysis(
         thread_id,
         {
             "whatHappened": parsed.whatHappened,
