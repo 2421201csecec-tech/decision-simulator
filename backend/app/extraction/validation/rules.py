@@ -177,6 +177,9 @@ def V015_action_variable_map_keys_match(schema: dict) -> RuleResult:
 
 def V016_constraint_targets_valid(schema: dict) -> RuleResult:
     ids = _var_ids(schema)
+    if not ids:
+        # Variables not yet populated (pre-Pass 2) — constraints are forward-references, skip
+        return RuleResult(passed=True, rule_id="V016")
     for c in schema.get("constraints", []):
         target = c.get("target", "")
         if target and target not in ids:
