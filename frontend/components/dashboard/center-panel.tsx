@@ -47,6 +47,7 @@ interface CenterPanelProps {
   onBack: () => void;
   onContinue: (data: any) => void;
   onAutosaveClarify?: (data: any) => Promise<void> | void;
+  onDraftChange?: (data: any) => void;
   autosaveStatus?: "idle" | "saving" | "saved" | "error";
   onSubmitFinal: () => void;
   onRunSimulation?: () => void;
@@ -56,7 +57,7 @@ interface CenterPanelProps {
   selectedFailedDecision?: string | null;
 }
 
-export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision }: CenterPanelProps) {
+export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision }: CenterPanelProps) {
   if (view === "clarify") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
@@ -64,6 +65,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           onBack={onBack}
           onContinue={onContinue}
           onAutosave={onAutosaveClarify}
+          onDraftChange={onDraftChange}
           autosaveStatus={autosaveStatus}
           initialData={decisionData}
         />

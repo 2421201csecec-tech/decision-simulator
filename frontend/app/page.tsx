@@ -7,11 +7,13 @@ import { CenterPanel } from "@/components/dashboard/center-panel";
 import { RightPanel } from "@/components/dashboard/right-panel";
 import { cn } from "@/lib/utils";
 import {
+  analyzeDraft,
   createThread,
   fetchClarifyDraft,
   fetchGroupedThreads,
   saveClarifyDraft,
   type ClarifyDraft,
+  type DraftInsights,
   type GroupedThreads,
   type ThreadRecord,
 } from "@/lib/api/threads";
@@ -43,6 +45,8 @@ export default function Dashboard() {
   });
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [uiError, setUiError] = useState<string | null>(null);
+  const [clarifyInsights, setClarifyInsights] = useState<DraftInsights | null>(null);
+  const [isAnalyzingDraft, setIsAnalyzingDraft] = useState(false);
   const autosaveResetTimerRef = useRef<number | null>(null);
   const lastAutosavedByThreadRef = useRef<Record<string, string>>({});
 
@@ -149,6 +153,19 @@ export default function Dashboard() {
     }
   }, [selectedThreadId]);
 
+  const handleDraftChange = useCallback(async (data: DecisionData) => {
+    setIsAnalyzingDraft(true);
+    const insights = await analyzeDraft({
+      title: data.title,
+      core_problem: data.coreProblem,
+      context: data.context,
+      constraints: data.constraints,
+      assumptions: data.assumptions,
+    });
+    setClarifyInsights(insights);
+    setIsAnalyzingDraft(false);
+  }, []);
+
   const handleSubmitFinal = () => {
     setView("decision-output");
   };
@@ -248,6 +265,7 @@ export default function Dashboard() {
             onBack={handleBack}
             onContinue={handleContinue}
             onAutosaveClarify={handleAutosaveClarify}
+            onDraftChange={handleDraftChange}
             autosaveStatus={autosaveStatus}
             onSubmitFinal={handleSubmitFinal}
             onRunSimulation={handleRunSimulation}
@@ -272,6 +290,8 @@ export default function Dashboard() {
               onToggleCollapse={() => setRightCollapsed(!rightCollapsed)}
               onRunSimulation={handleRunSimulation}
               onStartRevision={handleStartRevision}
+              clarifyInsights={clarifyInsights}
+              isAnalyzingDraft={isAnalyzingDraft}
             />
           </div>
         </div>

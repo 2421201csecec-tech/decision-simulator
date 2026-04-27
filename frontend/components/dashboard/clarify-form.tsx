@@ -13,6 +13,7 @@ interface ClarifyFormProps {
   onBack: () => void;
   onContinue: (data: any) => void;
   onAutosave?: (data: any) => Promise<void> | void;
+  onDraftChange?: (data: any) => void;
   autosaveStatus?: "idle" | "saving" | "saved" | "error";
   initialData?: {
     title?: string;
@@ -24,7 +25,7 @@ interface ClarifyFormProps {
   };
 }
 
-export function ClarifyForm({ onBack, onContinue, onAutosave, autosaveStatus = "idle", initialData }: ClarifyFormProps) {
+export function ClarifyForm({ onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData }: ClarifyFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [coreProblem, setCoreProblem] = useState(initialData?.coreProblem || "");
   const [desiredOutcome, setDesiredOutcome] = useState(initialData?.desiredOutcome || "");
@@ -74,6 +75,17 @@ export function ClarifyForm({ onBack, onContinue, onAutosave, autosaveStatus = "
 
     return () => window.clearTimeout(timer);
   }, [draftPayload, onAutosave]);
+
+  useEffect(() => {
+    if (!onDraftChange) return;
+    if (title.length < 6 || coreProblem.length < 15) return;
+
+    const timer = window.setTimeout(() => {
+      onDraftChange(draftPayload);
+    }, 1500);
+
+    return () => window.clearTimeout(timer);
+  }, [draftPayload, onDraftChange, title.length, coreProblem.length]);
 
   const autosaveLabel =
     autosaveStatus === "saving"
@@ -233,13 +245,13 @@ export function ClarifyForm({ onBack, onContinue, onAutosave, autosaveStatus = "
           <div className="relative">
             <textarea
               value={coreProblem}
-              onChange={(e) => setCoreProblem(e.target.value.slice(0, 100))}
+              onChange={(e) => setCoreProblem(e.target.value.slice(0, 500))}
               placeholder="What outcome do you want?"
               rows={2}
               className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
             />
             <span className="absolute right-3 bottom-3 text-xs text-muted-foreground">
-              {coreProblem.length} / 100
+              {coreProblem.length} / 500
             </span>
           </div>
         </div>
@@ -250,13 +262,13 @@ export function ClarifyForm({ onBack, onContinue, onAutosave, autosaveStatus = "
           <div className="relative">
             <textarea
               value={context}
-              onChange={(e) => setContext(e.target.value.slice(0, 200))}
+              onChange={(e) => setContext(e.target.value.slice(0, 500))}
               placeholder="(Optional)"
               rows={2}
               className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
             />
             <span className="absolute right-3 bottom-3 text-xs text-muted-foreground">
-              {context.length} / 200 · Optional
+              {context.length} / 500 · Optional
             </span>
           </div>
         </div>

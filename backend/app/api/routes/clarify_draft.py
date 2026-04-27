@@ -19,9 +19,9 @@ TextListItem = Annotated[
 
 class ClarifyDraftPayload(BaseModel):
     title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=150)]
-    coreProblem: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)]
-    desiredOutcome: Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)]
-    context: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)]
+    coreProblem: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+    desiredOutcome: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]=""
+    context: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
     constraints: list[TextListItem]
     assumptions: list[TextListItem]
 

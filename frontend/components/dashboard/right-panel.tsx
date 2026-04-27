@@ -14,6 +14,7 @@ import {
   fetchDecisionOutput,
   fetchFailureAnalysis,
   type DecisionOutputData,
+  type DraftInsights,
   type FailureAnalysisData,
 } from "@/lib/api/threads";
 
@@ -25,22 +26,9 @@ interface RightPanelProps {
   onToggleCollapse: () => void;
   onRunSimulation?: () => void;
   onStartRevision?: () => void;
+  clarifyInsights?: DraftInsights | null;
+  isAnalyzingDraft?: boolean;
 }
-
-// Clarify view insights
-const suggestions = [
-  { text: "Your problem statement is too broad" },
-  { text: "Try defining the decision timeframe" },
-];
-
-const missingElements = [
-  { text: "Market data" },
-  { text: "Financial constraint" },
-];
-
-const biasWatch = [
-  { text: "No major bias detected yet" },
-];
 
 // Pressure test insights
 const weakAssumptions = [
@@ -135,7 +123,7 @@ function DecisionStrengthMeter({ value }: { value: number }) {
   );
 }
 
-export function RightPanel({ view, threadId, simulationActive, isCollapsed, onToggleCollapse }: RightPanelProps) {
+export function RightPanel({ view, threadId, simulationActive, isCollapsed, onToggleCollapse, clarifyInsights, isAnalyzingDraft }: RightPanelProps) {
   const [showSimulationResults, setShowSimulationResults] = useState(false);
   const [decisionOutputData, setDecisionOutputData] = useState<DecisionOutputData | null>(null);
   const [failureAnalysisData, setFailureAnalysisData] = useState<FailureAnalysisData | null>(null);
@@ -337,44 +325,65 @@ export function RightPanel({ view, threadId, simulationActive, isCollapsed, onTo
       {/* Clarify View */}
       {view === "clarify" && (
         <div className="flex-1 space-y-6 overflow-y-auto scroll-container">
-          {/* Suggestions */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-3">Suggestions</h4>
-            <ul className="space-y-2">
-              {suggestions.map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
-                  <span>{item.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {isAnalyzingDraft ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="animate-pulse">Analysing</span>
+              <span className="animate-pulse delay-75">.</span>
+              <span className="animate-pulse delay-150">.</span>
+              <span className="animate-pulse delay-300">.</span>
+            </div>
+          ) : !clarifyInsights ? (
+            <p className="text-sm text-muted-foreground">Keep writing to get insights...</p>
+          ) : (
+            <>
+              {/* Suggestions */}
+              {clarifyInsights.suggestions.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-foreground mb-3">Suggestions</h4>
+                  <ul className="space-y-2">
+                    {clarifyInsights.suggestions.map((text, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          {/* Missing Elements */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-3">Missing Elements</h4>
-            <ul className="space-y-2">
-              {missingElements.map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
-                  <span>{item.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+              {/* Missing Elements */}
+              {clarifyInsights.missing_elements.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-foreground mb-3">Missing Elements</h4>
+                  <ul className="space-y-2">
+                    {clarifyInsights.missing_elements.map((text, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-          {/* Bias Watch */}
-          <div>
-            <h4 className="text-sm font-medium text-foreground mb-3">Bias Watch</h4>
-            <ul className="space-y-2">
-              {biasWatch.map((item, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
-                  <span>{item.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+              {/* Bias Watch */}
+              <div>
+                <h4 className="text-sm font-medium text-foreground mb-3">Bias Watch</h4>
+                {clarifyInsights.biases.length > 0 ? (
+                  <ul className="space-y-2">
+                    {clarifyInsights.biases.map((text, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No major bias detected.</p>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

@@ -275,3 +275,29 @@ export async function saveFailureAnalysis(
   const data = await response.json();
   return data.failureAnalysis;
 }
+
+export interface DraftInsights {
+  suggestions: string[];
+  missing_elements: string[];
+  biases: string[];
+}
+
+export async function analyzeDraft(data: {
+  title: string;
+  core_problem: string;
+  context?: string;
+  constraints?: string[];
+  assumptions?: string[];
+}): Promise<DraftInsights | null> {
+  try {
+    const response = await fetch("/api/analyze-draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
