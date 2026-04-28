@@ -97,6 +97,8 @@ export interface ThreadRecord {
   pressureTest?: PressureTestState;
   simulationRuns?: SimulationRun[];
   failureAnalysis?: FailureAnalysisData;
+  extractionSchema?: Record<string, unknown>;
+  decisionOutput?: DecisionOutputData;
 }
 
 interface StoreData {
@@ -265,6 +267,8 @@ export async function saveClarifyDraft(threadId: string, draft: ClarifyDraft): P
     pressureTest: undefined,
     simulationRuns: undefined,
     failureAnalysis: undefined,
+    extractionSchema: undefined,
+    decisionOutput: undefined,
     updatedAt: new Date().toISOString(),
   };
 
@@ -282,21 +286,44 @@ function createDefaultPressureState(): PressureTestState {
   };
 }
 
-export async function generatePressureTest(threadId: string): Promise<ThreadRecord | null> {
+export async function generatePressureTest(threadId: string, aiScenarios?: PressureScenario[]): Promise<ThreadRecord | null> {
   const data = await readStore();
   const index = data.threads.findIndex((thread) => thread.id === threadId);
   if (index === -1) return null;
 
   if (!data.threads[index].pressureTest) {
+    const scenarios = aiScenarios && aiScenarios.length > 0 ? aiScenarios : DEFAULT_PRESSURE_SCENARIOS;
     data.threads[index] = {
       ...data.threads[index],
-      pressureTest: createDefaultPressureState(),
+      pressureTest: {
+        scenarios,
+        currentIndex: 0,
+        responses: {},
+        completed: false,
+        updatedAt: new Date().toISOString(),
+      },
       updatedAt: new Date().toISOString(),
     };
     await writeStore(data);
   }
 
   return data.threads[index];
+}
+
+export async function saveExtractionSchema(threadId: string, schema: Record<string, unknown>): Promise<void> {
+  const data = await readStore();
+  const index = data.threads.findIndex((t) => t.id === threadId);
+  if (index === -1) return;
+  data.threads[index] = { ...data.threads[index], extractionSchema: schema, updatedAt: new Date().toISOString() };
+  await writeStore(data);
+}
+
+export async function saveDecisionOutput(threadId: string, output: DecisionOutputData): Promise<void> {
+  const data = await readStore();
+  const index = data.threads.findIndex((t) => t.id === threadId);
+  if (index === -1) return;
+  data.threads[index] = { ...data.threads[index], decisionOutput: output, updatedAt: new Date().toISOString() };
+  await writeStore(data);
 }
 
 export async function getPressureTest(threadId: string): Promise<PressureTestState | null> {

@@ -8,8 +8,12 @@ from uuid import uuid4
 from sqlalchemy import delete, select, update as sa_update
 from sqlalchemy.orm import selectinload
 
+import logging
+
 from app.db.engine import get_async_session
 from app.models.decision import Decision, FailureAnalysis, SimulationRun
+
+logger = logging.getLogger("thread_repository")
 
 ThreadStatus = Literal["active", "revision", "failed", "completed"]
 
@@ -253,6 +257,9 @@ async def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str,
 # ---------------------------------------------------------------------------
 
 async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
+    from app.extraction.pipeline import compose_draft_input, run_extraction
+    from app.pressure_test.generator import generate_scenarios
+
     async with get_async_session() as session:
         result = await session.execute(
             select(Decision).where(Decision.decision_id == thread_id)
@@ -262,7 +269,40 @@ async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
             return None
 
         if decision.pressure_test is None:
-            decision.pressure_test = _create_default_pressure_state()
+            # TODO: write path on first access — remove when Engine 2 gets explicit trigger.
+            extraction_schema = decision.extraction_schema
+
+            # Step 1: run extraction if not already stored
+            if not extraction_schema:
+                clarify_draft = decision.clarify_draft or {}
+                user_input = compose_draft_input(clarify_draft)
+                if len(user_input.strip()) > 20:
+                    try:
+                        result_schema = await run_extraction(user_input)
+                        if result_schema.get("status") != "clarification_needed":
+                            extraction_schema = result_schema
+                            decision.extraction_schema = extraction_schema
+                    except Exception:
+                        logger.warning("extraction failed for thread %s — using clarify draft fallback", thread_id, exc_info=True)
+
+            # Step 2: generate scenarios from extraction schema or clarify draft
+            source = extraction_schema or (decision.clarify_draft or {})
+            ai_scenarios = await generate_scenarios(source)
+
+            if ai_scenarios:
+                for i, s in enumerate(ai_scenarios, start=1):
+                    s["id"] = i
+                state: dict[str, Any] = {
+                    "scenarios": ai_scenarios,
+                    "currentIndex": 0,
+                    "responses": {},
+                    "completed": False,
+                    "updatedAt": _now_iso(),
+                }
+            else:
+                state = _create_default_pressure_state()
+
+            decision.pressure_test = state
             decision.updated_at = _now()
             await session.commit()
 
@@ -616,10 +656,36 @@ def _compute_decision_output(thread: dict[str, Any]) -> dict[str, Any]:
 
 
 async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
-    thread = await get_thread_by_id(thread_id)
-    if not thread:
-        return None
-    return _compute_decision_output(thread)
+    from app.decision_output.generator import generate_decision_output
+
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id)
+        )
+        decision = result.scalar_one_or_none()
+        if not decision:
+            return None
+
+        # Return cached verdict if available
+        if decision.decision_output:
+            return decision.decision_output
+
+        # Try LLM generation when extraction schema + completed pressure test exist
+        extraction_schema = decision.extraction_schema
+        pressure_test = decision.pressure_test
+        if extraction_schema and pressure_test and pressure_test.get("completed"):
+            output = await generate_decision_output(extraction_schema, pressure_test)
+            if output:
+                # Inject decisionTitle from thread for frontend compatibility
+                output.setdefault("decisionTitle", (decision.clarify_draft or {}).get("title") or decision.title)
+                decision.decision_output = output
+                decision.updated_at = _now()
+                await session.commit()
+                return output
+
+        # Fallback: algorithmic computation (existing behaviour)
+        thread = _decision_to_dict_full(decision)
+        return _compute_decision_output(thread)
 
 
 # ---------------------------------------------------------------------------

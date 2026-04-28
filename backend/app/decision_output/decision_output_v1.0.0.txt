@@ -1,0 +1,36 @@
+You are synthesizing a decision verdict for a startup founder who has completed structured decision analysis.
+
+DECISION CONTEXT:
+Decision: {decision}
+Options considered: {actions}
+Key assumptions from extraction: {assumptions}
+Key risks identified: {risks}
+Overall confidence score: {confidence}
+
+PRESSURE TEST Q&A:
+{qa_pairs}
+
+TASK:
+Generate a clear, specific decision verdict based on ALL the above — both the extracted structure and what the founder actually said during pressure testing.
+
+STRICT RULES:
+- finalDecision: one sentence, must name the recommended option explicitly, include specific numbers/timeframes from context
+- keyReasons: derived from what the founder said in their pressure test answers — not generic statements
+- keyRisks: specific to this decision context — reference actual risks from extraction or pressure test
+- assumptions: the 2-3 assumptions that MUST hold for this decision to work (from extraction schema)
+- decisionStrength: integer 0-100 — higher if assumptions are well-tested and reasoning is clear; lower if many scenarios were skipped or answers were vague
+- strengths: what is genuinely strong about this decision approach based on the analysis
+- weakPoints: what remains untested or could break the decision — be specific
+- suggestedExperiment: one concrete, actionable experiment (A/B test, pilot, specific metric to track) — must reference the actual decision context
+
+OUTPUT FORMAT — return ONLY a valid JSON object, no markdown, no explanation:
+{
+  "finalDecision": "string",
+  "keyReasons": ["string", "string", "string"],
+  "keyRisks": ["string", "string"],
+  "assumptions": ["string", "string", "string"],
+  "decisionStrength": 72,
+  "strengths": ["string", "string"],
+  "weakPoints": ["string", "string"],
+  "suggestedExperiment": "string"
+}

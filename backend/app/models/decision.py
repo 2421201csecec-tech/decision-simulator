@@ -21,6 +21,8 @@ class Decision(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False)
     clarify_draft = Column(JSON, nullable=False, default=dict)
     pressure_test = Column(JSON, nullable=True)
+    extraction_schema = Column(JSON, nullable=True)
+    decision_output = Column(JSON, nullable=True)
 
     simulation_runs = relationship(
         "SimulationRun",

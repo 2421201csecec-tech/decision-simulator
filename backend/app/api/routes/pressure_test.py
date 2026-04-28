@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, StringConstraints, ValidationError
 
+from app.pressure_test.generator import generate_scenarios
 from app.storage.thread_store import (
     generate_pressure_test,
     get_pressure_test,
@@ -15,6 +16,28 @@ from app.storage.thread_store import (
 )
 
 router = APIRouter()
+
+
+class GenerateScenariosRequest(BaseModel):
+    # Accepts extraction schema fields OR clarify draft fields
+    title: str = ""
+    core_problem: str = ""
+    context: str = ""
+    constraints: list = []
+    assumptions: list = []
+    # Extraction schema fields (present when called with a full schema)
+    decision: str = ""
+    variables: list = []
+    actions: list = []
+    risks: list = []
+    hidden_deps: list = []
+
+
+@router.post("/pressure-test/generate")
+async def post_generate_scenarios(req: GenerateScenariosRequest) -> JSONResponse:
+    # Pass full dict — generator detects extraction schema vs clarify draft by 'variables' key
+    scenarios = await generate_scenarios(req.model_dump())
+    return JSONResponse({"scenarios": scenarios})
 
 
 class PressureAnswerPayload(BaseModel):

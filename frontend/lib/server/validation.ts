@@ -21,9 +21,9 @@ export const createThreadSchema = z.object({
 
 export const clarifyDraftSchema = z.object({
   title: z.string().trim().max(150),
-  coreProblem: z.string().trim().max(100),
-  desiredOutcome: z.string().trim().max(100),
-  context: z.string().trim().max(200),
+  coreProblem: z.string().trim().max(500),
+  desiredOutcome: z.string().trim().max(500),
+  context: z.string().trim().max(500),
   constraints: textList,
   assumptions: textList,
 });

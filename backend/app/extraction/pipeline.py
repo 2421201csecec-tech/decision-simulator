@@ -23,6 +23,20 @@ from app.extraction.validation.validator import SchemaValidator
 
 logger = logging.getLogger("extraction.pipeline")
 
+
+def compose_draft_input(draft: dict) -> str:
+    """Compose clarify draft fields into a single user_input string for the extraction pipeline."""
+    parts = [f"Decision: {(draft.get('title') or '').strip()}"]
+    if draft.get("coreProblem"):
+        parts.append(f"Problem: {draft['coreProblem']}")
+    if draft.get("context"):
+        parts.append(f"Context: {draft['context']}")
+    if draft.get("constraints"):
+        parts.append(f"Constraints: {'; '.join(draft['constraints'])}")
+    if draft.get("assumptions"):
+        parts.append(f"My assumptions: {'; '.join(draft['assumptions'])}")
+    return "\n".join(parts)
+
 # ---------------------------------------------------------------------------
 # Clarification question templates — keyed by rule_id
 # ---------------------------------------------------------------------------

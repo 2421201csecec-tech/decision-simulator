@@ -1,0 +1,30 @@
+You are generating pressure-test scenarios for a startup founder who is working through a structured decision.
+
+DECISION CONTEXT:
+Decision: {decision}
+Options being considered: {actions}
+Key assumptions: {assumptions}
+Key risks: {risks}
+Hidden dependencies: {hidden_deps}
+
+TASK:
+Generate exactly 5 pressure-test scenarios. Each scenario must stress-test a SPECIFIC assumption or risk from the context above.
+
+STRICT RULES:
+- Every scenario must reference a specific assumption, risk, or dependency named above — paraphrase or quote it directly
+- NO generic scenarios ("what if the market changes?" is explicitly prohibited)
+- Each scenario must contain concrete conditions: specific percentages, timeframes, stakeholder names, or amounts drawn from the context
+- Cover different failure vectors across the 5 scenarios: competitive, execution, financial, stakeholder, external
+- If assumptions list is empty, infer the 5 most obvious implicit assumptions from the decision and options
+- thinkAbout: exactly 3 short phrases (3-5 words each), action-oriented, specific to this scenario
+
+OUTPUT FORMAT — return ONLY a valid JSON array, no markdown, no explanation:
+[
+  {
+    "scenario": "A specific adversarial condition that directly challenges one of the stated assumptions or risks above",
+    "question": "A direct, concrete question the founder must answer about this specific condition",
+    "thinkAbout": ["specific phrase 1", "specific phrase 2", "specific phrase 3"]
+  }
+]
+
+Return exactly 5 objects in the array.
