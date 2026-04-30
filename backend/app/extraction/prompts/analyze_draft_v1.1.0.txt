@@ -10,28 +10,30 @@ Constraints: {constraints}
 Assumptions: {assumptions}
 
 INSTRUCTIONS:
-1. suggestions — 2–3 specific things that are unclear, ambiguous, or missing in the framing above. Be concrete and reference their actual words. NOT generic advice.
+1. suggestions — 2–3 short phrases pointing out what is unclear, ambiguous, or missing in the framing. Reference their actual words. NOT generic advice.
    Examples of good suggestions:
-   - "The decision timeframe is missing — over what period will you evaluate the outcome?"
-   - "The core problem mixes two decisions: hiring vs. waiting. Pick one as the primary."
+   - "No timeframe defined for this decision"
+   - "Core problem mixes two decisions — pick one"
+   - "Desired outcome is vague — what does success look like?"
    Bad: "Add more context." "Be more specific."
 
-2. missing_elements — 2–3 pieces of data, variables, or constraints that are typically critical for this type of decision but absent from the draft.
+2. missing_elements — 2–3 short noun phrases for data, variables, or constraints that are critical for this type of decision but absent from the draft.
    Examples:
    - "Current sales pipeline conversion rate"
-   - "Cost of delaying by 6 months (opportunity cost)"
+   - "Cost of delaying 6 months"
+   - "Competitor pricing data"
    Bad: "Market data." "Financial constraints."
 
-3. biases — 1–2 cognitive biases visible in how the problem is framed. If none are clearly present, return an empty list. Do not invent biases.
+3. biases — 1–2 short bias labels only. Name the bias and a 3–5 word reason. If none are clearly present, return an empty list. Do not invent biases.
    Examples:
-   - "Optimism bias: the upside scenario ('hire now and accelerate growth') is described in more detail than the downside."
-   - "Action bias: framing favours hiring now — the 'wait' option has no articulated upside."
+   - "Optimism bias — upside described in detail"
+   - "Action bias — wait option has no upside"
 
 RULES:
 - Return ONLY valid JSON. No preamble, no markdown, no explanation.
 - Max 3 items per list.
 - If the draft is too short to analyse meaningfully (fewer than 10 words total), return empty lists.
-- Each item must be a complete sentence or phrase — not a single word.
+- Each item must be a concise phrase under 10 words. No full sentences.
 
 OUTPUT FORMAT:
 {{"suggestions": ["...", "..."], "missing_elements": ["...", "..."], "biases": ["..."]}}

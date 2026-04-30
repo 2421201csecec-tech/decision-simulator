@@ -71,8 +71,11 @@ export interface SimulationOption {
 
 export interface SimulationExplanation {
   verdict: string;
-  risk_alert: string;
   key_assumption: string;
+  // Per-case bullet arrays (optional — old stored runs may not have these)
+  ideal_case?: string[];
+  base_case?: string[];
+  worst_case?: string[];
 }
 
 export interface SimulationRun {

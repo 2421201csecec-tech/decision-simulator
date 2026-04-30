@@ -88,6 +88,7 @@ export default function Dashboard() {
   const handleBack = () => {
     if (view === "simulation") {
       setView("decision-output");
+      setRightCollapsed(false);
     } else if (view === "failure-analysis") {
       setView("home");
       setSelectedFailedDecision(null);
@@ -170,6 +171,7 @@ export default function Dashboard() {
 
   const handleRunSimulation = () => {
     setView("simulation");
+    setRightCollapsed(true);
   };
 
   const handleStartRevision = () => {
@@ -272,7 +274,7 @@ export default function Dashboard() {
           <div
             className={cn(
               "transition-all duration-300 ease-in-out",
-              rightCollapsed ? "w-10" : "w-72"
+              rightCollapsed ? "w-10" : "w-80"
             )}
           >
             <RightPanel

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, Zap, AlertCircle, TrendingUp } from "lucide-react";
+import { ChevronLeft, AlertCircle, TrendingUp } from "lucide-react";
 import {
   fetchSimulationState,
   runThreadSimulation,
@@ -27,7 +27,28 @@ function pct(n: number) {
   return `${Math.round(n * 100)}%`;
 }
 
-function VariableSlider({
+function formatValue(n: number): string {
+  if (Math.abs(n) >= 100000) {
+    return `₹${new Intl.NumberFormat("en-IN").format(Math.round(n))}`;
+  }
+  if (Math.abs(n) >= 1000) {
+    return new Intl.NumberFormat("en-IN").format(Math.round(n));
+  }
+  if (Number.isInteger(n)) return String(n);
+  return n % 1 === 0 ? String(n) : parseFloat(n.toFixed(2)).toString();
+}
+
+function generateRangeOptions(lo: number, hi: number): number[] {
+  const span = hi - lo;
+  // If small integer range — enumerate all integers
+  if (Number.isInteger(lo) && Number.isInteger(hi) && span <= 12) {
+    return Array.from({ length: span + 1 }, (_, i) => lo + i);
+  }
+  // Otherwise 4 evenly-spaced steps: lo, 1/3, 2/3, hi
+  return [0, 1, 2, 3].map((i) => lo + (span * i) / 3);
+}
+
+function VariableDropdown({
   variable,
   value,
   onChange,
@@ -37,6 +58,7 @@ function VariableSlider({
   onChange: (v: number) => void;
 }) {
   const [lo, hi] = variable.range ?? [0, 1];
+  const options = generateRangeOptions(lo, hi);
   const importanceColor =
     variable.importance === "critical"
       ? "text-accent"
@@ -46,28 +68,21 @@ function VariableSlider({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-foreground">{variable.name}</span>
-          <span className={`text-xs ${importanceColor}`}>({variable.importance})</span>
-        </div>
-        <span className="text-sm font-medium text-accent tabular-nums">
-          {Number.isInteger(value) ? value : value.toFixed(2)}
-        </span>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-foreground">{variable.name}</span>
+        <span className={`text-xs ${importanceColor}`}>({variable.importance})</span>
       </div>
-      <input
-        type="range"
-        min={lo}
-        max={hi}
-        step={(hi - lo) / 100}
+      <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[hsl(var(--accent))]"
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{lo}</span>
-        <span>{hi}</span>
-      </div>
+        className="w-full px-3 py-2.5 bg-secondary border border-border/50 rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent appearance-none"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {formatValue(opt)}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -92,7 +107,7 @@ function VariableCategorical({
       <select
         value={selectedIdx}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full px-3 py-2 bg-secondary border border-border/50 rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+        className="w-full px-3 py-2.5 bg-secondary border border-border/50 rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent appearance-none"
       >
         {options.map((opt, idx) => (
           <option key={idx} value={idx}>
@@ -131,64 +146,6 @@ function VariableBoolean({
   );
 }
 
-function ResultsTable({
-  options,
-  winnerId,
-  caseView,
-}: {
-  options: SimulationOption[];
-  winnerId: string | null | undefined;
-  caseView: CaseView;
-}) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-xs text-muted-foreground border-b border-border/30">
-            <th className="text-left py-2 pr-3 font-medium">Option</th>
-            <th className="text-right py-2 px-2 font-medium">Utility</th>
-            <th className="text-right py-2 px-2 font-medium">Downside</th>
-            <th className="text-right py-2 px-2 font-medium">CVaR</th>
-            <th className="text-right py-2 pl-2 font-medium">Score</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/20">
-          {options.map((opt) => {
-            const isWinner = opt.id === winnerId;
-            return (
-              <tr key={opt.id} className={isWinner ? "bg-accent/5" : ""}>
-                <td className="py-2.5 pr-3">
-                  <div className="flex items-center gap-2">
-                    <span className={isWinner ? "text-foreground font-medium" : "text-foreground/70"}>
-                      {opt.label || opt.id}
-                    </span>
-                    {isWinner && (
-                      <span className="text-xs bg-accent/20 text-accent px-1.5 py-0.5 rounded-full">
-                        winner
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="text-right py-2.5 px-2 tabular-nums text-foreground/80">
-                  {caseValue(opt, caseView).toFixed(3)}
-                </td>
-                <td className="text-right py-2.5 px-2 tabular-nums text-foreground/80">
-                  {pct(opt.downside)}
-                </td>
-                <td className="text-right py-2.5 px-2 tabular-nums text-foreground/80">
-                  {opt.cvar.toFixed(3)}
-                </td>
-                <td className="text-right py-2.5 pl-2 tabular-nums font-medium text-foreground">
-                  {opt.score.toFixed(3)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 export function SimulationView({ threadId, onBack }: SimulationViewProps) {
   const [variables, setVariables] = useState<ExtractionVariable[]>([]);
@@ -224,9 +181,9 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
         for (const v of vars) {
           if (v.type === "continuous" || v.type === "ordinal") {
             const [lo, hi] = v.range ?? [0, 1];
-            defaults[v.variable_id] = (lo + hi) / 2;
-          } else if (v.type === "categorical") {
-            defaults[v.variable_id] = 0;
+            const opts = generateRangeOptions(lo, hi);
+            // Default to middle option (index 1 of 4, or midpoint of integer range)
+            defaults[v.variable_id] = opts[Math.floor(opts.length / 2)];
           } else {
             defaults[v.variable_id] = 0;
           }
@@ -302,7 +259,15 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
             <p className="text-xs text-muted-foreground">
               Adjust values to set your scenario. Monte Carlo samples 10,000 runs around each selection.
             </p>
-            <div className="space-y-5 p-4 bg-secondary/40 rounded-xl border border-border/30">
+            <div
+              className={`p-4 bg-secondary/40 rounded-xl border border-border/30 grid gap-5 ${
+                variables.length >= 9
+                  ? "grid-cols-3"
+                  : variables.length >= 6
+                  ? "grid-cols-2"
+                  : "grid-cols-1"
+              }`}
+            >
               {variables.map((v) => {
                 const val = userValues[v.variable_id] ?? 0;
                 const set = (n: number) => setUserValues((prev) => ({ ...prev, [v.variable_id]: n }));
@@ -312,7 +277,7 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
                 if (v.type === "boolean") {
                   return <VariableBoolean key={v.variable_id} variable={v} value={val} onChange={set} />;
                 }
-                return <VariableSlider key={v.variable_id} variable={v} value={val} onChange={set} />;
+                return <VariableDropdown key={v.variable_id} variable={v} value={val} onChange={set} />;
               })}
             </div>
           </div>
@@ -323,13 +288,15 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
         )}
 
         {/* Run button */}
-        <button
-          onClick={handleRunSimulation}
-          disabled={running || variables.length === 0}
-          className="w-full px-4 py-3 bg-accent text-accent-foreground rounded-xl text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {running ? "Running 10,000 simulations..." : "Run Simulation →"}
-        </button>
+        <div className="flex justify-center">
+          <button
+            onClick={handleRunSimulation}
+            disabled={running || variables.length === 0}
+            className="px-30 py-3 bg-accent text-accent-foreground rounded-xl text-sm font-medium hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {running ? "Running 10,000 simulations..." : "Run Simulation →"}
+          </button>
+        </div>
 
         {error && (
           <div className="flex items-center gap-2 text-xs text-destructive">
@@ -339,67 +306,117 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
         )}
 
         {/* Results */}
-        {options && options.length > 0 && (
+        {options && options.length > 0 && winner && (
           <div className="space-y-4">
-            {/* Winner banner */}
-            {winner && (
-              <div className="p-4 bg-accent/10 rounded-xl border border-accent/30 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Recommended</p>
-                  <p className="text-base font-medium text-foreground">{winner.label || winner.id}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground mb-0.5">Score</p>
-                  <p className="text-xl font-semibold text-accent">{winner.score.toFixed(3)}</p>
-                </div>
+            {/* Recommended Decision banner */}
+            <div className="p-4 bg-accent/10 rounded-xl border border-accent/30">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase mb-1">Recommended Decision</p>
+              <div className="flex items-end justify-between">
+                <p className="text-base font-medium text-foreground">{winner.label || winner.id}</p>
+                <p className="text-xl font-semibold text-accent tabular-nums">{winner.score.toFixed(3)}</p>
               </div>
-            )}
+            </div>
 
-            {/* Case toggle */}
-            <div className="flex rounded-lg border border-border/50 overflow-hidden text-xs">
+            {/* Case toggle — single row, all same accent color */}
+            <div className="grid grid-cols-3 gap-2 text-xs">
               {(["best", "base", "worst"] as CaseView[]).map((c) => (
                 <button
                   key={c}
                   onClick={() => setCaseView(c)}
-                  className={`flex-1 py-1.5 font-medium transition-colors ${
+                  className={`py-2 rounded-lg font-medium transition-colors border ${
                     caseView === c
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                      ? "bg-accent text-accent-foreground border-accent"
+                      : "bg-secondary text-muted-foreground border-border/50 hover:text-foreground"
                   }`}
                 >
-                  {c === "best" ? "Best Case" : c === "base" ? "Base Case" : "Worst Case"}
+                  {c === "best" ? "Ideal case" : c === "base" ? "Real world case" : "Worst case"}
                 </button>
               ))}
             </div>
 
-            {/* Options table */}
-            <ResultsTable options={options} winnerId={winnerId} caseView={caseView} />
+            {/* Key Metrics — Utility changes per case, Downside/CVaR are overall */}
+            {(() => {
+              const caseBg =
+                caseView === "worst"
+                  ? "bg-destructive/5 border-destructive/20"
+                  : caseView === "best"
+                  ? "bg-accent/5 border-accent/20"
+                  : "bg-secondary/40 border-border/30";
+              const metrics = [
+                {
+                  label: "Utility",
+                  value: caseValue(winner, caseView).toFixed(3),
+                  sub: caseView === "best" ? "Best 20% of outcomes" : caseView === "worst" ? "Worst 20% of outcomes" : "Median outcome",
+                },
+                {
+                  label: "Downside probability",
+                  value: pct(winner.downside),
+                  sub: "Across all 10,000 runs",
+                },
+                {
+                  label: "CVaR (tail risk)",
+                  value: winner.cvar.toFixed(3),
+                  sub: "Across all 10,000 runs",
+                },
+              ];
+              return (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Key Metrics</p>
+                  <div className={`grid grid-cols-3 gap-2 p-3 rounded-xl border ${caseBg}`}>
+                    {metrics.map(({ label, value, sub }) => (
+                      <div key={label} className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground">{label}</p>
+                        <p className="text-xl font-semibold text-foreground tabular-nums">{value}</p>
+                        <p className="text-xs text-muted-foreground/60 leading-snug">{sub}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
-            {/* Explanation */}
-            {explanation && (
-              <div className="space-y-3 pt-2 border-t border-border/30">
-                <div className="flex gap-2.5 p-3.5 bg-accent/10 rounded-xl border border-accent/20">
-                  <Zap className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-foreground">Verdict</p>
-                    <p className="text-sm text-foreground/80">{explanation.verdict}</p>
+            {/* What this means for you — bullet points per case */}
+            {explanation && (() => {
+              const bullets =
+                caseView === "best"
+                  ? explanation.ideal_case
+                  : caseView === "worst"
+                  ? explanation.worst_case
+                  : explanation.base_case;
+
+              const sectionBg =
+                caseView === "worst"
+                  ? "bg-destructive/5 border-destructive/15"
+                  : caseView === "best"
+                  ? "bg-accent/5 border-accent/15"
+                  : "bg-secondary/40 border-border/30";
+
+              return (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">What this means for you</p>
+                  <div className={`p-4 rounded-xl border ${sectionBg}`}>
+                    {bullets && bullets.length > 0 ? (
+                      <ul className="space-y-2">
+                        {bullets.map((b, i) => (
+                          <li key={i} className="flex gap-2.5 text-sm text-foreground/85">
+                            <span className="text-muted-foreground shrink-0 mt-0.5">→</span>
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-foreground/70">{explanation.verdict}</p>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-2.5 p-3.5 bg-secondary/60 rounded-xl border border-border/30">
-                  <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-foreground">Risk Alert</p>
-                    <p className="text-sm text-foreground/70">{explanation.risk_alert}</p>
-                  </div>
-                </div>
-                <div className="flex gap-2.5 p-3.5 bg-secondary/60 rounded-xl border border-border/30">
-                  <TrendingUp className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-foreground">Key Assumption</p>
-                    <p className="text-sm text-foreground/70">{explanation.key_assumption}</p>
-                  </div>
-                </div>
-              </div>
+              );
+            })()}
+
+            {/* Key assumption — always visible */}
+            {explanation?.key_assumption && (
+              <p className="text-xs text-muted-foreground italic px-1">
+                Key assumption: {explanation.key_assumption}
+              </p>
             )}
           </div>
         )}

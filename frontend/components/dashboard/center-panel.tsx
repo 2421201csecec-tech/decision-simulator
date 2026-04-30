@@ -135,7 +135,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
         {/* CTA Button */}
         <button
           onClick={onStartDecision}
-          className="mt-4 px-8 py-3 bg-accent text-accent-foreground rounded-full text-base font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
+          className="mt-4 px-8 py-3 bg-[#d4bf96] text-[#1a1816] rounded-full text-base font-semibold hover:bg-[#deca9f] transition-colors shadow-lg shadow-[#c9b896]/40"
         >
           Start New Decision
         </button>

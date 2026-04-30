@@ -20,6 +20,7 @@ class SimulateRequest(BaseModel):
 class ScoreRequest(BaseModel):
     extraction_schema: dict
     simulation: dict
+    user_values: dict[str, float] = {}
 
 
 @router.post("/simulate")
@@ -54,7 +55,8 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
         return JSONResponse({"message": "No simulation options to score"}, status_code=422)
 
     explanation = await generate_explanation(
-        req.extraction_schema, options, confidence, key_variable_id
+        req.extraction_schema, options, confidence, key_variable_id,
+        user_values=req.user_values,
     )
     return JSONResponse({
         **req.simulation,

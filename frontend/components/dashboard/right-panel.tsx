@@ -8,7 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import {
   fetchDecisionOutput,
   fetchFailureAnalysis,
@@ -43,7 +42,6 @@ const missingVariables = [
   { text: "Acquisition cost" },
 ];
 
-const pressureSuggestion = "Consider testing a ₹1999 launch price.";
 const decisionStrength = 42;
 
 // Decision output fallback insights
@@ -189,7 +187,7 @@ export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clar
   }
 
   return (
-    <aside className="w-72 h-full bg-card rounded-2xl border border-border/50 p-5 relative flex flex-col">
+    <aside className="w-80 h-full bg-card rounded-2xl border border-border/50 p-5 relative flex flex-col">
       {/* Header with collapse and menu */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -286,7 +284,7 @@ export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clar
 
       {/* Clarify View */}
       {view === "clarify" && (
-        <div className="flex-1 space-y-6 overflow-y-auto scroll-container">
+        <div className="flex-1 space-y-4 overflow-y-auto scroll-container">
           {isAnalyzingDraft ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="animate-pulse">Analysing</span>
@@ -300,12 +298,15 @@ export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clar
             <>
               {/* Suggestions */}
               {clarifyInsights.suggestions.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-foreground mb-3">Suggestions</h4>
-                  <ul className="space-y-2">
+                <div className="p-4 bg-secondary/30 rounded-xl border border-border/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Lightbulb className="w-4 h-4 text-accent" />
+                    <h4 className="text-sm font-medium text-accent">Suggestions</h4>
+                  </div>
+                  <ul className="space-y-1.5">
                     {clarifyInsights.suggestions.map((text, index) => (
                       <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
-                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        <span className="text-muted-foreground shrink-0 mt-0.5">→</span>
                         <span>{text}</span>
                       </li>
                     ))}
@@ -315,12 +316,15 @@ export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clar
 
               {/* Missing Elements */}
               {clarifyInsights.missing_elements.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-medium text-foreground mb-3">Missing Elements</h4>
-                  <ul className="space-y-2">
+                <div className="p-4 bg-secondary/30 rounded-xl border border-border/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ListX className="w-4 h-4 text-accent" />
+                    <h4 className="text-sm font-medium text-accent">Missing Elements</h4>
+                  </div>
+                  <ul className="space-y-1.5">
                     {clarifyInsights.missing_elements.map((text, index) => (
                       <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
-                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        <span className="text-muted-foreground shrink-0 mt-0.5">→</span>
                         <span>{text}</span>
                       </li>
                     ))}
@@ -329,13 +333,16 @@ export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clar
               )}
 
               {/* Bias Watch */}
-              <div>
-                <h4 className="text-sm font-medium text-foreground mb-3">Bias Watch</h4>
+              <div className="p-4 bg-secondary/30 rounded-xl border border-border/30">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-4 h-4 text-accent" />
+                  <h4 className="text-sm font-medium text-accent">Bias Watch</h4>
+                </div>
                 {clarifyInsights.biases.length > 0 ? (
-                  <ul className="space-y-2">
+                  <ul className="space-y-1.5">
                     {clarifyInsights.biases.map((text, index) => (
                       <li key={index} className="flex items-start gap-2 text-sm text-foreground/80">
-                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        <span className="text-muted-foreground shrink-0 mt-0.5">→</span>
                         <span>{text}</span>
                       </li>
                     ))}

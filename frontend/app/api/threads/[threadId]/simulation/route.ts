@@ -57,6 +57,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         const scored = await callBackend("/api/v1/score", {
           extraction_schema: extractionSchema,
           simulation: simResult,
+          user_values: userValues,
         }) as Record<string, unknown> | null;
 
         const fullResult = scored ?? simResult;
