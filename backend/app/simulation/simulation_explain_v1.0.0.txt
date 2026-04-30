@@ -1,0 +1,26 @@
+You are analysing a Monte Carlo simulation of a business decision. Output only valid JSON — no markdown, no explanation outside the JSON object.
+
+Decision: {decision}
+
+Simulation results (10,000 runs each):
+Winner: {winner_label} — score: {winner_score}, mean utility: {winner_mean}, downside probability: {winner_downside_pct}%, CVaR (worst 5%): {winner_cvar}
+Runner-up: {runner_label} — score: {runner_score}, mean utility: {runner_mean}, downside probability: {runner_downside_pct}%, CVaR (worst 5%): {runner_cvar}
+
+Confidence winner beats runner-up: {confidence_pct}%
+
+Most sensitive variable (computed by perturbation analysis): {key_variable_name} (id: {key_variable_id})
+A 20% change in this variable produces the largest shift in the winner's score.
+
+Return exactly this JSON:
+{
+  "verdict": "<one sentence: name the winner with its score and the runner-up score; state the single biggest reason the winner wins based on the numbers above>",
+  "risk_alert": "<one sentence: describe the worst 5% scenario for the WINNER using its CVaR number and what it means concretely for this specific decision>",
+  "key_assumption": "<one sentence: name the variable exactly as shown in {key_variable_name} and state what threshold or direction flip would make the runner-up win instead>"
+}
+
+RULES — violating any rule means a wrong answer:
+- verdict MUST contain both score numbers explicitly (e.g. "0.75 vs 0.66")
+- risk_alert MUST contain the CVaR number explicitly (e.g. "CVaR of {winner_cvar}")
+- key_assumption MUST name {key_variable_name} explicitly — do NOT invent or substitute a different variable
+- All three sentences must reference this decision's domain — no generic risk language like "there are risks"
+- Output only the JSON object, nothing else

@@ -55,11 +55,38 @@ export interface SimulationResult {
   risks: SimulationRisk[];
 }
 
+export interface SimulationOption {
+  id: string;
+  label: string;
+  mean: number;
+  std: number;
+  downside: number;
+  cvar: number;
+  upside: number;
+  score: number;
+  best_case: number;
+  base_case: number;
+  worst_case: number;
+}
+
+export interface SimulationExplanation {
+  verdict: string;
+  risk_alert: string;
+  key_assumption: string;
+}
+
 export interface SimulationRun {
   id: string;
-  variables: SimulationVariableSet;
-  results: SimulationResult;
   createdAt: string;
+  // Legacy v1 — manual input; old stored runs still use these
+  variables?: SimulationVariableSet;
+  results?: SimulationResult;
+  // v2 — extraction-driven Monte Carlo
+  options?: SimulationOption[];
+  confidence?: number;
+  winner_id?: string | null;
+  key_variable_id?: string | null;
+  explanation?: SimulationExplanation | null;
 }
 
 export interface FailureAnalysisData {
@@ -499,6 +526,31 @@ export async function runSimulation(
   return run;
 }
 
+export async function runExtractionSimulation(
+  threadId: string,
+  result: Pick<SimulationRun, "options" | "confidence" | "winner_id" | "key_variable_id" | "explanation">
+): Promise<SimulationRun | null> {
+  const data = await readStore();
+  const index = data.threads.findIndex((thread) => thread.id === threadId);
+  if (index === -1) return null;
+
+  const run: SimulationRun = {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    ...result,
+  };
+
+  const existingRuns = data.threads[index].simulationRuns ?? [];
+  data.threads[index] = {
+    ...data.threads[index],
+    simulationRuns: [run, ...existingRuns],
+    updatedAt: new Date().toISOString(),
+  };
+
+  await writeStore(data);
+  return run;
+}
+
 export async function getLatestSimulation(threadId: string): Promise<SimulationRun | null> {
   const thread = await getThreadById(threadId);
   return thread?.simulationRuns?.[0] ?? null;
@@ -520,9 +572,12 @@ export async function getDecisionOutputData(threadId: string): Promise<DecisionO
     (response) => !response.skipped && response.answer.trim().length > 0
   );
 
+  // v1 simulation run has variables/results; v2 has options. Guard accordingly.
+  const legacySim = latestSimulation?.variables && latestSimulation?.results ? latestSimulation : null;
+
   const decisionTitle = draft?.title?.trim() || thread.title;
-  const finalDecision = latestSimulation
-    ? `Proceed with ${latestSimulation.variables.price} pricing for ${latestSimulation.variables.targetMarket} over ${latestSimulation.variables.timeHorizon.toLowerCase()}.`
+  const finalDecision = legacySim
+    ? `Proceed with ${legacySim.variables!.price} pricing for ${legacySim.variables!.targetMarket} over ${legacySim.variables!.timeHorizon.toLowerCase()}.`
     : "Run simulation to finalize decision direction.";
 
   const keyReasons: string[] = [];
@@ -532,20 +587,20 @@ export async function getDecisionOutputData(threadId: string): Promise<DecisionO
   if (pressureResponses.length > 0) {
     keyReasons.push("Pressure-test responses show scenario awareness and adaptability.");
   }
-  if (latestSimulation) {
-    keyReasons.push(`Simulation indicates ${latestSimulation.results.adoptionProjection.toLowerCase()} adoption potential.`);
+  if (legacySim) {
+    keyReasons.push(`Simulation indicates ${legacySim.results!.adoptionProjection.toLowerCase()} adoption potential.`);
   }
   if (keyReasons.length === 0) {
     keyReasons.push("Initial reasoning has been captured and is ready for validation.");
   }
 
   const keyRisks: string[] = [];
-  if (latestSimulation) {
-    const topRisk = [...latestSimulation.results.risks].sort((a, b) => b.percentage - a.percentage)[0];
+  if (legacySim) {
+    const topRisk = [...legacySim.results!.risks].sort((a, b) => b.percentage - a.percentage)[0];
     if (topRisk) {
       keyRisks.push(`${topRisk.label} at ${topRisk.percentage}%.`);
     }
-    keyRisks.push(latestSimulation.results.competitorReaction);
+    keyRisks.push(legacySim.results!.competitorReaction);
   } else {
     keyRisks.push("No simulation run yet; risk profile is incomplete.");
   }
@@ -555,14 +610,14 @@ export async function getDecisionOutputData(threadId: string): Promise<DecisionO
     assumptions.push("Assumptions are pending definition in Clarify stage.");
   }
 
-  const baseStrengthFromSimulation = latestSimulation
-    ? 100 - Math.round(latestSimulation.results.risks.reduce((sum, risk) => sum + risk.percentage, 0) / latestSimulation.results.risks.length)
+  const baseStrengthFromSimulation = legacySim
+    ? 100 - Math.round(legacySim.results!.risks.reduce((sum, risk) => sum + risk.percentage, 0) / legacySim.results!.risks.length)
     : 45;
   const pressureBonus = Math.min(20, pressureResponses.length * 4);
   const decisionStrength = Math.max(20, Math.min(95, baseStrengthFromSimulation + pressureBonus));
 
   const strengths: string[] = [];
-  if (latestSimulation?.results.adoptionProjection.includes("High")) {
+  if (legacySim?.results?.adoptionProjection.includes("High")) {
     strengths.push("Projected adoption trend is favorable.");
   }
   strengths.push("Decision path is grounded in structured stages.");
@@ -571,8 +626,8 @@ export async function getDecisionOutputData(threadId: string): Promise<DecisionO
   }
 
   const weakPoints: string[] = [];
-  if (latestSimulation) {
-    latestSimulation.results.risks
+  if (legacySim) {
+    legacySim.results!.risks
       .filter((risk) => risk.percentage >= 40)
       .forEach((risk) => weakPoints.push(`${risk.label} remains elevated (${risk.percentage}%).`));
   }
@@ -580,8 +635,8 @@ export async function getDecisionOutputData(threadId: string): Promise<DecisionO
     weakPoints.push("No major weak point flagged yet; continue validating assumptions.");
   }
 
-  const suggestedExperiment = latestSimulation
-    ? latestSimulation.results.insight
+  const suggestedExperiment = legacySim
+    ? legacySim.results!.insight
     : "Run the simulation with at least two variable combinations to compare risk spread.";
 
   return {

@@ -4,6 +4,7 @@ import { ClarifyForm } from "./clarify-form";
 import { PressureTest } from "./pressure-test";
 import { DecisionOutput } from "./decision-output";
 import { DiagnoseFailure } from "./diagnose-failure";
+import { SimulationView } from "./simulation-view";
 
 function EidozLogoLarge({ className = "" }: { className?: string }) {
   return (
@@ -41,7 +42,7 @@ function EidozLogoLarge({ className = "" }: { className?: string }) {
 }
 
 interface CenterPanelProps {
-  view: "home" | "clarify" | "pressure-test" | "decision-output" | "failure-analysis";
+  view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
   selectedThreadId?: string | null;
   onStartDecision: () => void;
   onBack: () => void;
@@ -94,14 +95,22 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
     );
   }
 
+  if (view === "simulation") {
+    return (
+      <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
+        <SimulationView threadId={selectedThreadId} onBack={onBack} />
+      </main>
+    );
+  }
+
   if (view === "failure-analysis") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
-        <DiagnoseFailure 
+        <DiagnoseFailure
           threadId={selectedThreadId}
-          failedDecision={selectedFailedDecision || "Unknown Decision"} 
-          onBack={onBack} 
-          onRebuild={onRebuildDecision || (() => {})} 
+          failedDecision={selectedFailedDecision || "Unknown Decision"}
+          onBack={onBack}
+          onRebuild={onRebuildDecision || (() => {})}
         />
       </main>
     );

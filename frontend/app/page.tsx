@@ -18,7 +18,7 @@ import {
   type ThreadRecord,
 } from "@/lib/api/threads";
 
-type ViewState = "home" | "clarify" | "pressure-test" | "decision-output" | "failure-analysis";
+type ViewState = "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
 
 interface DecisionData {
   title: string;
@@ -33,7 +33,6 @@ export default function Dashboard() {
   const [view, setView] = useState<ViewState>("home");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [simulationActive, setSimulationActive] = useState(false);
   const [decisionData, setDecisionData] = useState<DecisionData | null>(null);
   const [selectedFailedDecision, setSelectedFailedDecision] = useState<string | null>(null);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -79,7 +78,6 @@ export default function Dashboard() {
       setSelectedThreadId(thread.id);
       setDecisionData(thread.clarifyDraft || null);
       setView("clarify");
-      setSimulationActive(false);
       await refreshGroupedThreads();
     } catch (error) {
       console.error("Failed to create thread", error);
@@ -88,8 +86,8 @@ export default function Dashboard() {
   };
 
   const handleBack = () => {
-    if (simulationActive) {
-      setSimulationActive(false);
+    if (view === "simulation") {
+      setView("decision-output");
     } else if (view === "failure-analysis") {
       setView("home");
       setSelectedFailedDecision(null);
@@ -171,20 +169,17 @@ export default function Dashboard() {
   };
 
   const handleRunSimulation = () => {
-    setSimulationActive(true);
+    setView("simulation");
   };
 
   const handleStartRevision = () => {
-    // Go back to clarify with pre-filled data
     setView("clarify");
-    setSimulationActive(false);
   };
 
   const handleFailureAnalysis = (thread: ThreadRecord) => {
     setUiError(null);
     setSelectedThreadId(thread.id);
     setSelectedFailedDecision(thread.title);
-    setSimulationActive(false);
     setView("failure-analysis");
   };
 
@@ -196,7 +191,6 @@ export default function Dashboard() {
 
   const handleLogoClick = () => {
     setView("home");
-    setSimulationActive(false);
     setDecisionData(null);
     setSelectedFailedDecision(null);
     setAutosaveStatus("idle");
@@ -207,7 +201,6 @@ export default function Dashboard() {
     setUiError(null);
     setAutosaveStatus("idle");
     setSelectedThreadId(thread.id);
-    setSimulationActive(false);
     setView("clarify");
 
     try {
@@ -285,7 +278,6 @@ export default function Dashboard() {
             <RightPanel
               view={view}
               threadId={selectedThreadId}
-              simulationActive={simulationActive}
               isCollapsed={rightCollapsed}
               onToggleCollapse={() => setRightCollapsed(!rightCollapsed)}
               onRunSimulation={handleRunSimulation}

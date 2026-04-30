@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { SimulationEngine } from "./simulation-engine";
 import {
   fetchDecisionOutput,
   fetchFailureAnalysis,
@@ -19,9 +18,8 @@ import {
 } from "@/lib/api/threads";
 
 interface RightPanelProps {
-  view: "home" | "clarify" | "pressure-test" | "decision-output" | "failure-analysis";
+  view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
   threadId?: string | null;
-  simulationActive?: boolean;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onRunSimulation?: () => void;
@@ -123,8 +121,7 @@ function DecisionStrengthMeter({ value }: { value: number }) {
   );
 }
 
-export function RightPanel({ view, threadId, simulationActive, isCollapsed, onToggleCollapse, clarifyInsights, isAnalyzingDraft }: RightPanelProps) {
-  const [showSimulationResults, setShowSimulationResults] = useState(false);
+export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clarifyInsights, isAnalyzingDraft }: RightPanelProps) {
   const [decisionOutputData, setDecisionOutputData] = useState<DecisionOutputData | null>(null);
   const [failureAnalysisData, setFailureAnalysisData] = useState<FailureAnalysisData | null>(null);
 
@@ -178,41 +175,6 @@ export function RightPanel({ view, threadId, simulationActive, isCollapsed, onTo
     };
   }, [view, threadId]);
 
-  if (simulationActive && view === "decision-output") {
-    return (
-      <aside
-        className={cn(
-          "bg-card rounded-2xl border border-border/50 transition-all duration-300 ease-in-out overflow-hidden flex flex-col",
-          isCollapsed ? "w-10" : showSimulationResults ? "w-96" : "w-72"
-        )}
-      >
-        {/* Header with Collapse Button */}
-        <div className="flex items-center justify-between p-3 border-b border-border/30 shrink-0">
-          {!isCollapsed && (
-            <h3 className="text-sm font-medium text-foreground truncate">Decision Simulation</h3>
-          )}
-          <button
-            onClick={onToggleCollapse}
-            className="p-1 text-muted-foreground hover:text-foreground transition-colors ml-auto"
-            title={isCollapsed ? "Expand" : "Collapse"}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-
-        {/* Content */}
-        {!isCollapsed && (
-          <div className="flex-1 overflow-y-auto scroll-container p-4">
-            <SimulationEngine threadId={threadId} onResultsShown={setShowSimulationResults} />
-          </div>
-        )}
-      </aside>
-    );
-  }
   if (isCollapsed) {
     return (
       <aside className="w-10 h-full flex flex-col items-center pt-4">

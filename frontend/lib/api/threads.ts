@@ -69,11 +69,49 @@ export interface SimulationResult {
   risks: SimulationRisk[];
 }
 
+export interface SimulationOption {
+  id: string;
+  label: string;
+  mean: number;
+  std: number;
+  downside: number;
+  cvar: number;
+  upside: number;
+  score: number;
+  best_case: number;
+  base_case: number;
+  worst_case: number;
+}
+
+export interface SimulationExplanation {
+  verdict: string;
+  risk_alert: string;
+  key_assumption: string;
+}
+
 export interface SimulationRun {
   id: string;
-  variables: SimulationVariableSet;
-  results: SimulationResult;
   createdAt: string;
+  // Legacy v1 — manual input
+  variables?: SimulationVariableSet;
+  results?: SimulationResult;
+  // v2 — extraction-driven Monte Carlo
+  options?: SimulationOption[];
+  confidence?: number;
+  winner_id?: string | null;
+  key_variable_id?: string | null;
+  explanation?: SimulationExplanation | null;
+}
+
+export interface ExtractionVariable {
+  variable_id: string;
+  name: string;
+  type: "continuous" | "ordinal" | "categorical" | "boolean";
+  range?: [number, number];
+  possible_values?: string[];
+  importance: "critical" | "high" | "medium" | "low";
+  direction: "maximize" | "minimize";
+  extraction_confidence: number;
 }
 
 export interface DecisionOutputData {
@@ -205,25 +243,30 @@ export async function skipPressureTestScenario(
   return data.pressureTest;
 }
 
-export async function fetchLatestSimulation(threadId: string): Promise<SimulationRun | null> {
-  const response = await fetch(`/api/threads/${threadId}/simulation`, {
-    cache: "no-store",
-  });
-
-  if (response.status === 404) return null;
-  if (!response.ok) return parseApiError(response, "Failed to fetch latest simulation");
+export async function fetchSimulationState(threadId: string): Promise<{
+  run: SimulationRun | null;
+  extractionSchema: Record<string, unknown> | null;
+}> {
+  const response = await fetch(`/api/threads/${threadId}/simulation`, { cache: "no-store" });
+  if (response.status === 404) return { run: null, extractionSchema: null };
+  if (!response.ok) return parseApiError(response, "Failed to fetch simulation");
   const data = await response.json();
-  return data.run;
+  return { run: data.run ?? null, extractionSchema: data.extractionSchema ?? null };
+}
+
+export async function fetchLatestSimulation(threadId: string): Promise<SimulationRun | null> {
+  const { run } = await fetchSimulationState(threadId);
+  return run;
 }
 
 export async function runThreadSimulation(
   threadId: string,
-  payload: SimulationVariableSet
+  userValues: Record<string, number> = {}
 ): Promise<SimulationRun> {
   const response = await fetch(`/api/threads/${threadId}/simulation`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ user_values: userValues }),
   });
 
   if (!response.ok) return parseApiError(response, "Failed to run simulation");

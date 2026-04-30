@@ -6,7 +6,6 @@ import {
   fetchLatestSimulation,
   runThreadSimulation,
   type SimulationResult,
-  type SimulationVariableSet,
 } from "@/lib/api/threads";
 
 interface SimulationEngineProps {
@@ -43,7 +42,7 @@ export function SimulationEngine({ threadId, onResultsShown }: SimulationEngineP
         const latest = await fetchLatestSimulation(threadId);
         if (!active) return;
 
-        if (!latest) {
+        if (!latest || !latest.variables || !latest.results) {
           setPrice("");
           setMarketingSpend("");
           setResults(null);
@@ -99,17 +98,10 @@ export function SimulationEngine({ threadId, onResultsShown }: SimulationEngineP
       setRunning(true);
       setError(null);
 
-      const payload: SimulationVariableSet = {
-        price: normalizedPrice,
-        targetMarket,
-        marketingSpend: normalizedSpend,
-        timeHorizon,
-      };
-
-      const run = await runThreadSimulation(threadId, payload);
-      setPrice(run.variables.price);
-      setMarketingSpend(run.variables.marketingSpend);
-      setResults(run.results);
+      const run = await runThreadSimulation(threadId, {});
+      if (run.variables) setPrice(run.variables.price ?? "");
+      if (run.variables) setMarketingSpend(run.variables.marketingSpend ?? "");
+      setResults(run.results ?? null);
       setHasRun(true);
       onResultsShown?.(true);
     } catch (err) {
