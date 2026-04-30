@@ -185,3 +185,19 @@
     background: var(--muted-foreground);
   }
 }
+
+@keyframes ticker-flip-out {
+  0%   { transform: translateY(0) rotateX(0deg); opacity: 1; }
+  100% { transform: translateY(-110%) rotateX(25deg); opacity: 0; }
+}
+@keyframes ticker-flip-in {
+  0%   { transform: translateY(110%) rotateX(-25deg); opacity: 0; }
+  100% { transform: translateY(0) rotateX(0deg); opacity: 1; }
+}
+.ticker-exit { animation: ticker-flip-out 0.36s cubic-bezier(0.23,1,0.32,1) forwards; }
+.ticker-enter { animation: ticker-flip-in 0.36s cubic-bezier(0.23,1,0.32,1) forwards; }
+
+@keyframes ticker-blink {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}

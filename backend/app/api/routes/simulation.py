@@ -62,7 +62,9 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
         **req.simulation,
         "explanation": explanation,
     })
-
+# The following endpoints fetch past simulation runs for a thread.
+# The frontend currently only uses the latest run endpoint, but the history endpoint 
+# is available for debugging and potential future features.
 
 @router.get("/threads/{thread_id}/simulation")
 async def get_simulation(thread_id: str) -> JSONResponse:
@@ -71,6 +73,7 @@ async def get_simulation(thread_id: str) -> JSONResponse:
         return JSONResponse({"message": "Simulation run not found"}, status_code=404)
     return JSONResponse({"run": run})
 
+#this endpoint is not currently used by the frontend but is available for debugging and future features like showing past runs
 
 @router.get("/threads/{thread_id}/simulation/history")
 async def get_simulation_history_route(thread_id: str) -> JSONResponse:

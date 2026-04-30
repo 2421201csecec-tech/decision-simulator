@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MoreHorizontal, ChevronRight, ChevronLeft, AlertTriangle, Settings, ListX, Lightbulb, Zap, TrendingUp, AlertCircle, Beaker } from "lucide-react";
 import {
   DropdownMenu,
@@ -69,6 +69,98 @@ const missedVariable = [
 ];
 
 const failureRecommendation = "Test pricing ladder: ₹1499 / ₹1999 / ₹2499";
+
+const TICKER_SEQUENCE = [
+  { text: "AI Thinking Assistant", isTask: false },
+  { text: "Loading context...", isTask: true },
+  { text: "Scanning biases...", isTask: true },
+  { text: "Running Kautilya...", isTask: true },
+  { text: "Weighing trade-offs...", isTask: true },
+  { text: "Kautilya is ready", isTask: false },
+  { text: "Mapping decisions...", isTask: true },
+  { text: "Stress-testing logic...", isTask: true },
+  { text: "Checking assumptions...", isTask: true },
+  { text: "Your Thinking Assistant", isTask: false },
+  { text: "Updating suggestions...", isTask: true },
+  { text: "Detecting blind spots...", isTask: true },
+  { text: "Kautilya is thinking...", isTask: true },
+  { text: "Your Thinking Assistant", isTask: false },
+];
+
+function TickerHeader() {
+  const [displayText, setDisplayText] = useState(TICKER_SEQUENCE[0].text);
+  const [isTask, setIsTask] = useState(false);
+  const [animClass, setAnimClass] = useState("");
+  const idxRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    const timers: number[] = [];
+
+    const tick = () => {
+      if (!active) return;
+      const current = TICKER_SEQUENCE[idxRef.current];
+      const delay = current.isTask ? 1400 : 2600;
+
+      const t1 = window.setTimeout(() => {
+        if (!active) return;
+        setAnimClass("ticker-exit");
+
+        const t2 = window.setTimeout(() => {
+          if (!active) return;
+          idxRef.current = (idxRef.current + 1) % TICKER_SEQUENCE.length;
+          const next = TICKER_SEQUENCE[idxRef.current];
+          setDisplayText(next.text);
+          setIsTask(next.isTask);
+          setAnimClass("ticker-enter");
+
+          const t3 = window.setTimeout(() => {
+            if (!active) return;
+            setAnimClass("");
+            tick();
+          }, 400);
+          timers.push(t3);
+        }, 360);
+        timers.push(t2);
+      }, delay);
+      timers.push(t1);
+    };
+
+    tick();
+    return () => {
+      active = false;
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  return (
+    <div className="flex items-center gap-1.5 flex-1 justify-center">
+      <div
+        className="h-5 overflow-hidden flex items-center"
+        style={{ perspective: "300px" }}
+      >
+        <span
+          className={`whitespace-nowrap block ${
+            isTask
+              ? "text-xs text-muted-foreground"
+              : "text-sm font-medium text-foreground"
+          } ${animClass}`}
+        >
+          {displayText}
+        </span>
+      </div>
+      <div className="flex gap-[3px] items-center">
+        {[0, 0.2, 0.4].map((delay) => (
+          <span
+            key={delay}
+            className="w-[3px] h-[3px] rounded-full bg-muted-foreground/40"
+            style={{ animation: `ticker-blink 1.2s ease-in-out ${delay}s infinite` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function DecisionStrengthMeter({ value }: { value: number }) {
   const radius = 36;
@@ -197,11 +289,7 @@ export function RightPanel({ view, threadId, isCollapsed, onToggleCollapse, clar
           <ChevronRight className="w-4 h-4" />
         </button>
 
-        {(view === "clarify" || view === "pressure-test") && (
-          <h3 className="text-sm font-medium text-foreground flex-1 text-center">
-            AI Thinking Assistant
-          </h3>
-        )}
+        {(view === "clarify" || view === "pressure-test") && <TickerHeader />}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
