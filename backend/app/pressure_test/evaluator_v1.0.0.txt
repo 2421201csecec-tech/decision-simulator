@@ -1,0 +1,25 @@
+QUESTION: {question}
+FAILURE VECTOR: {failure_vector}
+ANSWER: {answer}
+
+Evaluate this founder's answer. Return ONLY valid JSON, no markdown, no explanation:
+{"quality": "adequate", "missing": [], "next_probe_type": null, "commitment": null}
+
+quality — pick one:
+  strong: specific numbers, concrete plan, directly addresses the scenario
+  adequate: directional, reasonable, covers the key concern
+  weak: vague, no specifics, avoids the core question
+  vague: no meaningful substance, generic platitude
+
+missing — list any absent from the answer (use [] if none):
+  "numbers" — no specific figures or percentages
+  "timeframe" — no timeline or duration
+  "fallback" — no plan if primary plan fails
+  "commitment" — no concrete decision or commitment
+
+next_probe_type — null if quality is strong or adequate; otherwise the most useful probe:
+  "realism" — founder's stated figures or plan needs reality-checking
+  "fallback" — need to know what happens if stated plan fails
+  "threshold" — need to identify the break-even or minimum-viable condition
+
+commitment — verbatim short extract if founder stated a concrete commitment ("we will X", specific number, explicit decision). null otherwise.

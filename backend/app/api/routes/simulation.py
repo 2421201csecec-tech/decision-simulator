@@ -21,6 +21,7 @@ class ScoreRequest(BaseModel):
     extraction_schema: dict
     simulation: dict
     user_values: dict[str, float] = {}
+    thread_id: str | None = None
 
 
 @router.post("/simulate")
@@ -54,9 +55,21 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
     if not options:
         return JSONResponse({"message": "No simulation options to score"}, status_code=422)
 
+    thread_context = ""
+    if req.thread_id:
+        from app.storage.thread_store import get_thread_context_data
+        from app.thread_context import build_thread_context
+        ctx_data = await get_thread_context_data(req.thread_id)
+        if ctx_data:
+            thread_context = build_thread_context({
+                **ctx_data,
+                "extractionSchema": req.extraction_schema,
+            })
+
     explanation = await generate_explanation(
         req.extraction_schema, options, confidence, key_variable_id,
         user_values=req.user_values,
+        thread_context=thread_context,
     )
     return JSONResponse({
         **req.simulation,
@@ -68,10 +81,12 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
 
 @router.get("/threads/{thread_id}/simulation")
 async def get_simulation(thread_id: str) -> JSONResponse:
+    from app.storage.thread_store import get_extraction_schema
     run = await get_latest_simulation(thread_id)
-    if run is None:
+    extraction_schema = await get_extraction_schema(thread_id)
+    if run is None and extraction_schema is None:
         return JSONResponse({"message": "Simulation run not found"}, status_code=404)
-    return JSONResponse({"run": run})
+    return JSONResponse({"run": run, "extractionSchema": extraction_schema})
 
 #this endpoint is not currently used by the frontend but is available for debugging and future features like showing past runs
 

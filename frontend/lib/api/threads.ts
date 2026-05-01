@@ -40,12 +40,42 @@ export interface PressureResponse {
   answeredAt: string;
 }
 
+export interface RootProbe {
+  id: string;
+  parentId: string;
+  depth: number;
+  question: string;
+  probeType: string;
+  status: "open" | "answered" | "skipped";
+  answer: string | null;
+}
+
+export interface RootScenario {
+  id: number;
+  failure_vector: "execution" | "financial" | "external";
+  scenario: string;
+  question: string;
+  think_about: string[];
+  priority: number;
+  probe_depth: number;
+  probes: RootProbe[];
+  status: "open" | "probing" | "closed";
+  commitment: string | null;
+  answer: string | null;
+}
+
 export interface PressureTestState {
+  // v1 fields
   scenarios: PressureScenario[];
   currentIndex: number;
   responses: Record<string, PressureResponse>;
   completed: boolean;
   updatedAt: string;
+  // v2 fields (optional)
+  rootScenarios?: RootScenario[];
+  enriched?: boolean;
+  synthesized?: boolean;
+  summary?: Record<string, unknown> | null;
 }
 
 export interface SimulationVariableSet {
@@ -217,7 +247,7 @@ export async function fetchPressureTest(threadId: string): Promise<PressureTestS
 
 export async function submitPressureAnswer(
   threadId: string,
-  payload: { scenarioId: number; answer: string }
+  payload: { scenarioId: number; answer: string; probeId?: string | null }
 ): Promise<PressureTestState> {
   const response = await fetch(`/api/threads/${threadId}/pressure-test/answer`, {
     method: "POST",
@@ -232,7 +262,7 @@ export async function submitPressureAnswer(
 
 export async function skipPressureTestScenario(
   threadId: string,
-  payload: { scenarioId: number }
+  payload: { scenarioId: number; probeId?: string | null }
 ): Promise<PressureTestState> {
   const response = await fetch(`/api/threads/${threadId}/pressure-test/skip`, {
     method: "POST",

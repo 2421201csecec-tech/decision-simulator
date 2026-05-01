@@ -1,0 +1,8 @@
+ROOT QUESTION: {question}
+FOUNDER'S ANSWER: {answer}
+FAILURE VECTOR: {failure_vector}
+PROBE TYPE: {probe_type}
+
+{probe_instruction}
+
+Generate ONE targeted follow-up question. Max 30 words. Return the question text only — no explanation, no preamble, no JSON.

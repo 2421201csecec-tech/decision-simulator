@@ -14,6 +14,7 @@ from app.storage.thread_repository import (
     create_thread as _create_thread,
     get_grouped_threads as _get_grouped_threads,
     get_thread_by_id as _get_thread_by_id,
+    get_thread_context_data as _get_thread_context_data,
     save_clarify_draft as _save_clarify_draft,
     generate_pressure_test as _generate_pressure_test,
     get_pressure_test as _get_pressure_test,
@@ -22,6 +23,7 @@ from app.storage.thread_repository import (
     run_simulation as _run_simulation,
     get_latest_simulation as _get_latest_simulation,
     get_simulation_history as _get_simulation_history,
+    get_extraction_schema as _get_extraction_schema,
     get_decision_output_data as _get_decision_output_data,
     get_failure_analysis as _get_failure_analysis,
     save_failure_analysis as _save_failure_analysis,
@@ -44,6 +46,10 @@ async def get_thread_by_id(thread_id: str) -> dict[str, Any] | None:
     return await _get_thread_by_id(thread_id)
 
 
+async def get_thread_context_data(thread_id: str) -> dict[str, Any] | None:
+    return await _get_thread_context_data(thread_id)
+
+
 async def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str, Any] | None:
     return await _save_clarify_draft(thread_id, draft)
 
@@ -56,12 +62,16 @@ async def get_pressure_test(thread_id: str) -> dict[str, Any] | None:
     return await _get_pressure_test(thread_id)
 
 
-async def submit_pressure_answer(thread_id: str, scenario_id: int, answer: str) -> dict[str, Any] | None:
-    return await _submit_pressure_answer(thread_id, scenario_id, answer)
+async def submit_pressure_answer(
+    thread_id: str, scenario_id: int, answer: str, probe_id: str | None = None
+) -> dict[str, Any] | None:
+    return await _submit_pressure_answer(thread_id, scenario_id, answer, probe_id)
 
 
-async def skip_pressure_scenario(thread_id: str, scenario_id: int) -> dict[str, Any] | None:
-    return await _skip_pressure_scenario(thread_id, scenario_id)
+async def skip_pressure_scenario(
+    thread_id: str, scenario_id: int, probe_id: str | None = None
+) -> dict[str, Any] | None:
+    return await _skip_pressure_scenario(thread_id, scenario_id, probe_id)
 
 
 async def run_simulation(thread_id: str, variables: dict[str, Any]) -> dict[str, Any] | None:
@@ -70,6 +80,10 @@ async def run_simulation(thread_id: str, variables: dict[str, Any]) -> dict[str,
 
 async def get_latest_simulation(thread_id: str) -> dict[str, Any] | None:
     return await _get_latest_simulation(thread_id)
+
+
+async def get_extraction_schema(thread_id: str) -> dict[str, Any] | None:
+    return await _get_extraction_schema(thread_id)
 
 
 async def get_simulation_history(thread_id: str) -> list[dict[str, Any]] | None:

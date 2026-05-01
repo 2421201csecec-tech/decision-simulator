@@ -9,7 +9,7 @@ Overall confidence score: {confidence}
 
 PRESSURE TEST Q&A:
 {qa_pairs}
-
+{thread_context}
 TASK:
 Generate a clear, specific decision verdict based on ALL the above — both the extracted structure and what the founder actually said during pressure testing.
 

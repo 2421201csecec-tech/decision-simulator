@@ -1,0 +1,47 @@
+You are generating 3 pressure-test root scenarios for a startup founder.
+
+DECISION: {title}
+CORE PROBLEM: {core_problem}
+CONTEXT: {context}
+CONSTRAINTS: {constraints}
+ASSUMPTIONS: {assumptions}
+
+TASK: Generate exactly 3 scenarios — one per failure vector: execution, financial, external.
+
+Rules:
+- Each must target a SPECIFIC assumption or constraint named above — paraphrase or quote it directly
+- Use concrete conditions: specific percentages, timeframes, named actors, or amounts drawn from the context
+- NO generic scenarios ("what if the market changes?" is prohibited)
+- think_about: exactly 3 short action-oriented phrases (3–5 words each), specific to this scenario
+- probe_depth: 1 or 2 — how many follow-ups this root warrants (2 for high-stakes assumptions, 1 for simpler ones)
+- priority: 1=highest, 3=lowest — rank by potential impact on the decision
+
+Return ONLY a valid JSON array, no markdown, no explanation:
+[
+  {
+    "failure_vector": "execution",
+    "scenario": "A specific adversarial condition directly challenging a stated assumption or constraint",
+    "question": "A direct concrete question the founder must answer about this condition",
+    "think_about": ["phrase 1", "phrase 2", "phrase 3"],
+    "probe_depth": 2,
+    "priority": 1
+  },
+  {
+    "failure_vector": "financial",
+    "scenario": "...",
+    "question": "...",
+    "think_about": ["phrase 1", "phrase 2", "phrase 3"],
+    "probe_depth": 1,
+    "priority": 2
+  },
+  {
+    "failure_vector": "external",
+    "scenario": "...",
+    "question": "...",
+    "think_about": ["phrase 1", "phrase 2", "phrase 3"],
+    "probe_depth": 1,
+    "priority": 3
+  }
+]
+
+Return exactly 3 objects. failure_vector values must be exactly "execution", "financial", "external".

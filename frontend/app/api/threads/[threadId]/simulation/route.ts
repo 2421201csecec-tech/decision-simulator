@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getLatestSimulation,
   getThreadById,
   runExtractionSimulation,
   runSimulation,
 } from "@/lib/server/thread-store";
+import { isCoreBackendProxyEnabled } from "@/lib/server/core-backend-proxy";
 interface Params {
   params: Promise<{ threadId: string }>;
 }
@@ -26,8 +26,30 @@ async function callBackend(path: string, body: unknown): Promise<unknown | null>
   }
 }
 
+async function fetchBackendSimulationState(threadId: string): Promise<Record<string, unknown> | null> {
+  if (!BACKEND_URL) return null;
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(_: NextRequest, { params }: Params) {
   const { threadId } = await params;
+
+  if (BACKEND_URL && isCoreBackendProxyEnabled()) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, { cache: "no-store" });
+      if (res.ok) return NextResponse.json(await res.json());
+    } catch {
+      // fall through to local store
+    }
+  }
+
   const thread = await getThreadById(threadId);
   if (!thread) {
     return NextResponse.json({ message: "Thread not found" }, { status: 404 });
@@ -41,9 +63,14 @@ export async function POST(request: NextRequest, { params }: Params) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const userValues = (body?.user_values ?? {}) as Record<string, number>;
 
-  if (BACKEND_URL) {
+  if (BACKEND_URL && isCoreBackendProxyEnabled()) {
     const thread = await getThreadById(threadId);
-    const extractionSchema = thread?.extractionSchema;
+    let extractionSchema = thread?.extractionSchema ?? null;
+
+    if (!extractionSchema) {
+      const backendState = await fetchBackendSimulationState(threadId);
+      extractionSchema = (backendState?.extractionSchema as Record<string, unknown> | null) ?? null;
+    }
 
     if (extractionSchema) {
       // Step 1: Monte Carlo distributions + sensitivity
@@ -53,11 +80,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       }) as Record<string, unknown> | null;
 
       if (simResult?.options) {
-        // Step 2: LLM explanation
+        // Step 2: LLM explanation — pass thread_id so backend can inject session context
         const scored = await callBackend("/api/v1/score", {
           extraction_schema: extractionSchema,
           simulation: simResult,
           user_values: userValues,
+          thread_id: threadId,
         }) as Record<string, unknown> | null;
 
         const fullResult = scored ?? simResult;
@@ -70,10 +98,11 @@ export async function POST(request: NextRequest, { params }: Params) {
           explanation: fullResult.explanation as never,
         });
 
-        if (!run) {
-          return NextResponse.json({ message: "Thread not found" }, { status: 404 });
+        if (run) {
+          return NextResponse.json({ run }, { status: 201 });
         }
-        return NextResponse.json({ run }, { status: 201 });
+
+        return NextResponse.json({ run: fullResult }, { status: 201 });
       }
     }
   }
@@ -84,7 +113,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ message: "Thread not found" }, { status: 404 });
   }
 
-  const draft = thread.clarifyDraft;
   const dummyVariables = {
     price: "Rs 1,999",
     targetMarket: "Early Adopters" as const,

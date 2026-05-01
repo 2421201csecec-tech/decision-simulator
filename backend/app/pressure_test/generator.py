@@ -29,112 +29,128 @@ def _clean_fences(raw: str) -> str:
     return raw
 
 
-def _validate_scenarios(raw_list: list) -> list[dict]:
-    result = []
-    for s in raw_list[:6]:
-        think_about = s.get("thinkAbout") or []
-        if len(think_about) < 2:
+
+_REQUIRED_VECTORS = ("execution", "financial", "external")
+
+_PROBE_INSTRUCTIONS = {
+    "realism": "Ask whether the specific numbers, timeline, or plan the founder described are realistic given real-world constraints.",
+    "fallback": "Ask what the founder will do if the plan they described fails or the assumption turns out to be wrong.",
+    "threshold": "Ask the founder to identify the specific minimum condition (number, date, or event) below which this option becomes non-viable.",
+}
+
+
+def _validate_roots(raw_list: list) -> list[dict]:
+    """Validate and normalise the 3-root pre-generate LLM output."""
+    seen_vectors: set[str] = set()
+    result: list[dict] = []
+    for item in raw_list:
+        if not isinstance(item, dict):
             continue
-        if not s.get("scenario") or not s.get("question"):
+        vector = str(item.get("failure_vector") or "").strip().lower()
+        if vector not in _REQUIRED_VECTORS or vector in seen_vectors:
             continue
+        think_about = item.get("think_about") or item.get("thinkAbout") or []
+        if not item.get("scenario") or not item.get("question"):
+            continue
+        probe_depth = int(item.get("probe_depth") or 1)
+        priority = int(item.get("priority") or len(result) + 1)
         result.append({
-            "scenario": s["scenario"],
-            "question": s["question"],
-            "thinkAbout": think_about[:3],
+            "failure_vector": vector,
+            "scenario": str(item["scenario"])[:400],
+            "question": str(item["question"])[:300],
+            "think_about": [str(t)[:80] for t in think_about[:3]],
+            "probe_depth": max(1, min(2, probe_depth)),
+            "priority": priority,
         })
+        seen_vectors.add(vector)
+        if len(result) == 3:
+            break
     return result
 
 
-async def _call_with_retry(prompt: str) -> list[dict]:
-    """Call LLM with JSON parse retry at lower temperature on first failure."""
-    temperature = 0.4
-    # Note: LLMError hits except Exception immediately (call_llm has its own primary/fallback retry)
-    for attempt in range(2):
-        try:
-            raw, _, _, _ = await call_llm(prompt, temperature=temperature, max_tokens=1200)
-            scenarios = json.loads(_clean_fences(raw))
-            return _validate_scenarios(scenarios)
-        except json.JSONDecodeError:
-            if attempt == 0:
-                logger.warning("pressure test JSON parse failed — retrying at temperature=0.2")
-                temperature = 0.2
-                continue
-            logger.warning("pressure test JSON parse failed after 2 attempts")
-            return []
-        except Exception:
-            logger.warning("pressure test LLM call failed", exc_info=True)
-            return []
-    return []
-
-
-async def generate_scenarios(source: dict) -> list[dict]:
+async def pre_generate_roots(clarify_draft: dict) -> list[dict]:
     """
-    Generate 5 targeted pressure-test scenarios.
+    Fast pre-generation of 3 root scenarios (execution / financial / external)
+    from a clarify draft. One LLM call, returns normalised root dicts.
 
-    Accepts either:
-    - An extraction schema (has 'variables' key) → rich path using assumptions/risks
-    - A clarify draft (has 'coreProblem' key) → fallback path using raw fields
-
-    Returns list of {scenario, question, thinkAbout} or [] on failure.
+    Returns [] if draft is too thin or LLM fails.
     """
-    if "variables" in source:
-        return await _generate_from_extraction_schema(source)
-    return await _generate_from_clarify_draft(source)
-
-
-async def _generate_from_extraction_schema(schema: dict) -> list[dict]:
-    decision = (schema.get("decision") or "").strip()
-    if not decision:
-        return []
-
-    actions = schema.get("actions") or []
-    action_labels = ", ".join(a.get("label", "") for a in actions if a.get("label"))
-
-    all_assumptions = schema.get("assumptions") or []
-    high_fragility = [a for a in all_assumptions if float(a.get("fragility", 0)) >= 0.6]
-    assumption_lines = "\n".join(
-        f"- {a.get('text', '')}" for a in (high_fragility or all_assumptions)[:5]
-    ) or "(none stated)"
-
-    all_risks = schema.get("risks") or []
-    high_risks = [r for r in all_risks if float(r.get("severity", 0)) >= 0.6]
-    risk_lines = "\n".join(
-        f"- {r.get('text', '')}" for r in (high_risks or all_risks)[:3]
-    ) or "(none stated)"
-
-    hidden_deps = schema.get("hidden_deps") or []
-    dep_lines = "\n".join(f"- {d}" for d in hidden_deps[:3]) or "(none)"
-
-    template = (_PROMPT_DIR / "pressure_test_v1.0.0.txt").read_text(encoding="utf-8")
-    prompt = _fill_template(
-        template,
-        decision=decision,
-        actions=action_labels or "(not specified)",
-        assumptions=assumption_lines,
-        risks=risk_lines,
-        hidden_deps=dep_lines,
-    )
-    return await _call_with_retry(prompt)
-
-
-async def _generate_from_clarify_draft(draft: dict) -> list[dict]:
-    # Accept both camelCase (frontend) and snake_case (direct API calls)
-    title = (draft.get("title") or "").strip()
-    core_problem = (draft.get("coreProblem") or draft.get("core_problem") or "").strip()
-
+    title = (clarify_draft.get("title") or "").strip()
+    core_problem = (
+        clarify_draft.get("coreProblem") or clarify_draft.get("core_problem") or ""
+    ).strip()
     if len(f"{title} {core_problem}") < 20:
         return []
 
-    constraints = draft.get("constraints") or []
-    assumptions = draft.get("assumptions") or []
+    constraints = clarify_draft.get("constraints") or []
+    assumptions = clarify_draft.get("assumptions") or []
 
-    template = (_PROMPT_DIR / "pressure_test_clarify_v1.0.0.txt").read_text(encoding="utf-8")
+    template = (_PROMPT_DIR / "pre_generate_v1.0.0.txt").read_text(encoding="utf-8")
     prompt = _fill_template(
         template,
         title=title or "(not provided)",
         core_problem=core_problem or "(not provided)",
-        context=draft.get("context") or "(not provided)",
-        constraints=", ".join(constraints) if constraints else "(none)",
-        assumptions=", ".join(assumptions) if assumptions else "(none)",
+        context=str(clarify_draft.get("context") or "(not provided)"),
+        constraints=", ".join(str(c) for c in constraints) if constraints else "(none)",
+        assumptions=", ".join(str(a) for a in assumptions) if assumptions else "(none)",
     )
-    return await _call_with_retry(prompt)
+
+    temperature = 0.4
+    for attempt in range(2):
+        try:
+            raw, _, _, _ = await call_llm(prompt, temperature=temperature, max_tokens=900)
+            parsed = json.loads(_clean_fences(raw))
+            roots = _validate_roots(parsed)
+            if roots:
+                return roots
+            if attempt == 0:
+                logger.warning("pre_generate_roots: validation produced no roots, retrying")
+                temperature = 0.2
+                continue
+            return []
+        except json.JSONDecodeError:
+            if attempt == 0:
+                logger.warning("pre_generate_roots: JSON parse failed, retrying at lower temperature")
+                temperature = 0.2
+                continue
+            logger.warning("pre_generate_roots: JSON parse failed after 2 attempts")
+            return []
+        except Exception:
+            logger.warning("pre_generate_roots: LLM call failed", exc_info=True)
+            return []
+    return []
+
+
+async def generate_follow_up(
+    question: str,
+    answer: str,
+    failure_vector: str,
+    probe_type: str,
+) -> str | None:
+    """
+    Generate a single targeted follow-up probe question.
+    Returns the question string or None on failure.
+    """
+    instruction = _PROBE_INSTRUCTIONS.get(probe_type, _PROBE_INSTRUCTIONS["realism"])
+    template = (_PROMPT_DIR / "follow_up_v1.0.0.txt").read_text(encoding="utf-8")
+    prompt = _fill_template(
+        template,
+        question=question[:200],
+        answer=answer[:300],
+        failure_vector=failure_vector,
+        probe_type=probe_type,
+        probe_instruction=instruction,
+    )
+    try:
+        raw, _, _, _ = await call_llm(
+            prompt,
+            temperature=0.3,
+            max_tokens=60,
+        )
+        follow_up = raw.strip().strip('"').strip()
+        return follow_up if len(follow_up) > 10 else None
+    except Exception:
+        logger.warning("generate_follow_up failed", exc_info=True)
+        return None
+
+

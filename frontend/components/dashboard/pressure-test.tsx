@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, RotateCcw, ArrowRight, Lightbulb } from "lucide-react";
+import { ChevronLeft, RotateCcw, ArrowRight, Lightbulb, Zap } from "lucide-react";
 import {
   fetchPressureTest,
   generatePressureTest,
   skipPressureTestScenario,
   submitPressureAnswer,
   type PressureTestState,
+  type RootScenario,
+  type RootProbe,
 } from "@/lib/api/threads";
 
 interface PressureTestProps {
@@ -16,6 +18,18 @@ interface PressureTestProps {
   onSubmitFinal: () => void;
 }
 
+const VECTOR_LABELS: Record<string, string> = {
+  execution: "Execution Risk",
+  financial: "Financial Risk",
+  external: "External Risk",
+};
+
+const VECTOR_COLORS: Record<string, string> = {
+  execution: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  financial: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  external: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+};
+
 export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestProps) {
   const [pressureState, setPressureState] = useState<PressureTestState | null>(null);
   const [answer, setAnswer] = useState("");
@@ -23,28 +37,44 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const scenario = useMemo(() => {
-    if (!pressureState) return null;
+  // v2 derived values
+  const isV2 = Boolean(pressureState?.rootScenarios);
+
+  const activeRoot = useMemo<RootScenario | null>(() => {
+    if (!isV2 || !pressureState?.rootScenarios) return null;
+    return (
+      pressureState.rootScenarios.find((r) => r.status === "open" || r.status === "probing") ?? null
+    );
+  }, [isV2, pressureState]);
+
+  const activeProbe = useMemo<RootProbe | null>(() => {
+    if (!activeRoot) return null;
+    return activeRoot.probes.find((p) => p.status === "open") ?? null;
+  }, [activeRoot]);
+
+  // v1 derived values
+  const v1Scenario = useMemo(() => {
+    if (isV2 || !pressureState) return null;
     return pressureState.scenarios[pressureState.currentIndex] ?? null;
+  }, [isV2, pressureState]);
+
+  const totalScenarios = pressureState?.scenarios?.length ?? 0;
+  const currentScenarioIdx = pressureState?.currentIndex ?? 0;
+  const v1Progress = totalScenarios > 0 ? ((currentScenarioIdx + 1) / totalScenarios) * 100 : 0;
+
+  const v2ClosedCount = useMemo(() => {
+    if (!pressureState?.rootScenarios) return 0;
+    return pressureState.rootScenarios.filter((r) => r.status === "closed").length;
   }, [pressureState]);
+  const v2Progress = (v2ClosedCount / 3) * 100;
 
-  const totalScenarios = pressureState?.scenarios.length ?? 0;
-  const currentScenario = pressureState?.currentIndex ?? 0;
-  const progress = totalScenarios > 0 ? ((currentScenario + 1) / totalScenarios) * 100 : 0;
-
-  const countWords = (text: string) => {
-    return text.trim() ? text.trim().split(/\s+/).length : 0;
-  };
-
+  const countWords = (text: string) => (text.trim() ? text.trim().split(/\s+/).length : 0);
   const wordCount = countWords(answer);
   const maxWords = 120;
 
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
-    const words = countWords(text);
-    if (words <= maxWords) {
-      setAnswer(text);
-    }
+    if (countWords(text) <= maxWords) setAnswer(text);
   };
 
   useEffect(() => {
@@ -66,13 +96,16 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
         if (!active) return;
 
         setPressureState(state);
-        const current = state.scenarios[state.currentIndex];
-        const existingAnswer = current ? state.responses[String(current.id)]?.answer ?? "" : "";
-        setAnswer(existingAnswer);
 
-        if (state.completed) {
-          onSubmitFinal();
+        if (state.rootScenarios) {
+          // v2: no pre-filled answer
+          setAnswer("");
+        } else {
+          const current = state.scenarios[state.currentIndex];
+          setAnswer(current ? state.responses[String(current.id)]?.answer ?? "" : "");
         }
+
+        if (state.completed) onSubmitFinal();
       } catch {
         if (!active) return;
         setError("Unable to load pressure-test scenarios.");
@@ -82,28 +115,55 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
     };
 
     loadPressureState();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [threadId, onSubmitFinal]);
 
-  const handleSubmit = async () => {
-    if (!threadId || !scenario || !answer.trim() || submitting) return;
-
+  // --- v2 handlers ---
+  const handleSubmitV2 = async () => {
+    if (!threadId || !activeRoot || !answer.trim() || submitting) return;
     try {
       setSubmitting(true);
       const next = await submitPressureAnswer(threadId, {
-        scenarioId: scenario.id,
+        scenarioId: activeRoot.id,
         answer,
+        probeId: activeProbe?.id ?? null,
       });
       setPressureState(next);
+      setAnswer("");
+      if (next.completed) onSubmitFinal();
+    } catch {
+      setError("Failed to submit answer. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-      if (next.completed) {
-        onSubmitFinal();
-        return;
-      }
+  const handleSkipV2 = async () => {
+    if (!threadId || !activeRoot || submitting) return;
+    try {
+      setSubmitting(true);
+      const next = await skipPressureTestScenario(threadId, {
+        scenarioId: activeRoot.id,
+        probeId: activeProbe?.id ?? null,
+      });
+      setPressureState(next);
+      setAnswer("");
+      if (next.completed) onSubmitFinal();
+    } catch {
+      setError("Failed to skip scenario. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
+  // --- v1 handlers ---
+  const handleSubmitV1 = async () => {
+    if (!threadId || !v1Scenario || !answer.trim() || submitting) return;
+    try {
+      setSubmitting(true);
+      const next = await submitPressureAnswer(threadId, { scenarioId: v1Scenario.id, answer });
+      setPressureState(next);
+      if (next.completed) { onSubmitFinal(); return; }
       const nextScenario = next.scenarios[next.currentIndex];
       setAnswer(nextScenario ? next.responses[String(nextScenario.id)]?.answer ?? "" : "");
     } catch {
@@ -113,21 +173,13 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
     }
   };
 
-  const handleSkip = async () => {
-    if (!threadId || !scenario || submitting) return;
-
+  const handleSkipV1 = async () => {
+    if (!threadId || !v1Scenario || submitting) return;
     try {
       setSubmitting(true);
-      const next = await skipPressureTestScenario(threadId, {
-        scenarioId: scenario.id,
-      });
+      const next = await skipPressureTestScenario(threadId, { scenarioId: v1Scenario.id });
       setPressureState(next);
-
-      if (next.completed) {
-        onSubmitFinal();
-        return;
-      }
-
+      if (next.completed) { onSubmitFinal(); return; }
       const nextScenario = next.scenarios[next.currentIndex];
       setAnswer(nextScenario ? next.responses[String(nextScenario.id)]?.answer ?? "" : "");
     } catch {
@@ -137,6 +189,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
     }
   };
 
+  // --- Loading / empty states ---
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
@@ -145,7 +198,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
     );
   }
 
-  if (!scenario) {
+  if (!isV2 && !v1Scenario) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
         {error ?? "No pressure-test scenarios available."}
@@ -153,6 +206,145 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
     );
   }
 
+  if (isV2 && !activeRoot) {
+    return (
+      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+        {error ?? "No pressure-test scenarios available."}
+      </div>
+    );
+  }
+
+  // ─── v2 render ────────────────────────────────────────────────────────────
+  if (isV2 && activeRoot) {
+    const thinkAbout = activeProbe ? [] : activeRoot.think_about;
+    const displayQuestion = activeProbe ? activeProbe.question : activeRoot.question;
+    const vectorColor = VECTOR_COLORS[activeRoot.failure_vector] ?? VECTOR_COLORS.external;
+    const vectorLabel = VECTOR_LABELS[activeRoot.failure_vector] ?? activeRoot.failure_vector;
+
+    return (
+      <div className="h-full flex flex-col p-6 overflow-y-auto scroll-container">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onBack}
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-serif text-foreground">Pressure Test</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            {pressureState?.enriched && (
+              <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-accent/10 text-accent border border-accent/20 rounded-full">
+                <Zap className="w-3 h-3" />
+                Enriched
+              </span>
+            )}
+            <span className="text-sm text-muted-foreground">
+              {v2ClosedCount} / 3 scenarios
+            </span>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="h-1 bg-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent transition-all duration-300 ease-out rounded-full"
+              style={{ width: `${v2Progress}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 max-w-2xl mx-auto w-full">
+          {/* Vector Badge */}
+          <div className="mb-6 flex items-center gap-2">
+            <span className={`inline-block px-3 py-1 text-xs rounded-full border font-medium ${vectorColor}`}>
+              {vectorLabel}
+            </span>
+            {activeProbe && (
+              <span className="inline-block px-3 py-1 text-xs rounded-full border bg-secondary/50 text-muted-foreground border-border/40">
+                Follow-up
+              </span>
+            )}
+          </div>
+
+          {/* Root scenario context (always visible) */}
+          <div className="mb-6">
+            <p className="text-2xl font-serif text-foreground mb-2">
+              {activeRoot.scenario}
+            </p>
+            {!activeProbe && (
+              <p className="text-lg text-foreground/80">{activeRoot.question}</p>
+            )}
+          </div>
+
+          {/* Probe question (inline below root when probing) */}
+          {activeProbe && (
+            <div className="mb-6 pl-4 border-l-2 border-accent/40">
+              <p className="text-base text-foreground/90">{displayQuestion}</p>
+            </div>
+          )}
+
+          {/* Answer Field */}
+          <div className="space-y-2 mb-6">
+            <textarea
+              value={answer}
+              onChange={handleAnswerChange}
+              placeholder="Write your answer here... (Max 120 words)"
+              rows={6}
+              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
+            />
+            <div className="flex justify-end">
+              <span className="text-xs text-muted-foreground">{wordCount} / {maxWords}</span>
+            </div>
+          </div>
+
+          {/* Think About Chips (root question only) */}
+          {thinkAbout.length > 0 && (
+            <div className="flex items-center gap-3 mb-8 flex-wrap">
+              <div className="flex items-center gap-2 text-accent">
+                <Lightbulb className="w-4 h-4" />
+                <span className="text-sm">Think about:</span>
+              </div>
+              {thinkAbout.map((item, i) => (
+                <span
+                  key={i}
+                  className="px-3 py-1.5 bg-secondary border border-border/50 rounded-full text-sm text-foreground/80"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between pt-4 pb-6">
+            <button
+              onClick={handleSkipV2}
+              disabled={submitting}
+              className="px-5 py-2.5 bg-secondary border border-border/50 text-foreground/80 rounded-full text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {activeProbe ? "Skip Follow-up" : "Skip Scenario"}
+            </button>
+            <button
+              onClick={handleSubmitV2}
+              disabled={!answer.trim() || submitting}
+              className="px-6 py-2.5 bg-accent text-accent-foreground rounded-full text-sm font-medium hover:bg-accent/90 transition-colors flex items-center gap-2 shadow-lg shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Submit Answer
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          {error && <p className="text-xs text-destructive pb-2">{error}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── v1 render (unchanged) ─────────────────────────────────────────────────
   return (
     <div className="h-full flex flex-col p-6 overflow-y-auto scroll-container">
       {/* Header */}
@@ -166,10 +358,9 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
           </button>
           <h2 className="text-xl font-serif text-foreground">Pressure Test</h2>
         </div>
-
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
-            Scenario {currentScenario + 1} of {totalScenarios}
+            Scenario {currentScenarioIdx + 1} of {totalScenarios}
           </span>
         </div>
       </div>
@@ -179,27 +370,22 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
         <div className="h-1 bg-secondary rounded-full overflow-hidden">
           <div
             className="h-full bg-accent transition-all duration-300 ease-out rounded-full"
-            style={{ width: `${progress}%` }}
+            style={{ width: `${v1Progress}%` }}
           />
         </div>
       </div>
 
-      {/* Scenario Card */}
       <div className="flex-1 max-w-2xl mx-auto w-full">
-        {/* Scenario Badge */}
         <div className="mb-6">
           <span className="inline-block px-4 py-1.5 bg-accent/20 text-accent text-sm rounded-full border border-accent/30">
-            Scenario {currentScenario + 1}
+            Scenario {currentScenarioIdx + 1}
           </span>
         </div>
 
-        {/* Scenario Text */}
         <div className="mb-8">
           <p className="text-2xl font-serif text-foreground mb-2">
-            {scenario.scenario.split("Rs ").map((part, i) =>
-              i === 0 ? (
-                part
-              ) : (
+            {v1Scenario!.scenario.split("Rs ").map((part, i) =>
+              i === 0 ? part : (
                 <span key={i}>
                   <span className="text-accent">Rs {part.split(/\s/)[0]}</span>
                   {part.substring(part.indexOf(" "))}
@@ -207,36 +393,30 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
               )
             )}
           </p>
-          <p className="text-lg text-foreground/80">{scenario.question}</p>
+          <p className="text-lg text-foreground/80">{v1Scenario!.question}</p>
         </div>
 
-        {/* Answer Field */}
         <div className="space-y-2 mb-6">
-          <div className="relative">
-            <textarea
-              value={answer}
-              onChange={handleAnswerChange}
-              placeholder="Write your answer here... (Max 120 words)"
-              rows={6}
-              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
-            />
-          </div>
+          <textarea
+            value={answer}
+            onChange={handleAnswerChange}
+            placeholder="Write your answer here... (Max 120 words)"
+            rows={6}
+            className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
+          />
           <div className="flex justify-end">
-            <span className="text-xs text-muted-foreground">
-              {wordCount} / {maxWords}
-            </span>
+            <span className="text-xs text-muted-foreground">{wordCount} / {maxWords}</span>
           </div>
         </div>
 
-        {/* Think About Chips */}
         <div className="flex items-center gap-3 mb-8 flex-wrap">
           <div className="flex items-center gap-2 text-accent">
             <Lightbulb className="w-4 h-4" />
             <span className="text-sm">Think about:</span>
           </div>
-          {scenario.thinkAbout.map((item, index) => (
+          {v1Scenario!.thinkAbout.map((item, i) => (
             <span
-              key={index}
+              key={i}
               className="px-3 py-1.5 bg-secondary border border-border/50 rounded-full text-sm text-foreground/80"
             >
               {item}
@@ -244,19 +424,17 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
           ))}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex items-center justify-between pt-4 pb-6">
           <button
-            onClick={handleSkip}
+            onClick={handleSkipV1}
             disabled={submitting}
             className="px-5 py-2.5 bg-secondary border border-border/50 text-foreground/80 rounded-full text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
             Skip Scenario
           </button>
-
           <button
-            onClick={handleSubmit}
+            onClick={handleSubmitV1}
             disabled={!answer.trim() || submitting}
             className="px-6 py-2.5 bg-accent text-accent-foreground rounded-full text-sm font-medium hover:bg-accent/90 transition-colors flex items-center gap-2 shadow-lg shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >

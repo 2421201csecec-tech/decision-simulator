@@ -1,0 +1,15 @@
+DECISION: {decision}
+
+PRESSURE TEST — FOUNDER'S RESPONSES:
+{qa_pairs}
+
+Generate a compact synthesis of what these answers reveal. Return ONLY valid JSON, no markdown:
+{"what_founder_believed": [], "commitments_made": [], "unresolved_risks": [], "commitmentQuality": "adequate"}
+
+what_founder_believed — max 3 short strings, each ≤ 15 words: key assumptions the founder revealed through their answers
+commitments_made — concrete commitments extracted verbatim or paraphrased (specific numbers, named actions, explicit plans). [] if none.
+unresolved_risks — risks the founder acknowledged or that were raised but not addressed with a concrete plan. [] if none.
+commitmentQuality — overall quality of the founder's engagement:
+  strong: multiple specific commitments with numbers and timelines
+  adequate: directional plans, mostly addresses the scenarios
+  weak: vague or avoidant answers, few concrete positions taken

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDecisionOutputData, getThreadById, saveDecisionOutput, type DecisionOutputData } from "@/lib/server/thread-store";
-import { proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
+import { proxyRequestToCoreBackend, isCoreBackendProxyEnabled } from "@/lib/server/core-backend-proxy";
 
 interface Params {
   params: Promise<{ threadId: string }>;
@@ -28,7 +28,7 @@ export async function GET(_: NextRequest, { params }: Params) {
   }
 
   const backendUrl = process.env.CORE_BACKEND_URL?.replace(/\/$/, "");
-  if (backendUrl && thread.extractionSchema && thread.pressureTest?.completed) {
+  if (backendUrl && isCoreBackendProxyEnabled() && thread.extractionSchema && thread.pressureTest?.completed) {
     try {
       const res = await fetch(`${backendUrl}/api/v1/decision-output/generate`, {
         method: "POST",

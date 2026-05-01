@@ -1,6 +1,7 @@
 You are helping someone understand a Monte Carlo simulation of their real-life decision. Output only valid JSON — no markdown, no explanation outside the JSON object.
 
 DECISION: {decision}
+{thread_context}
 
 OPTIONS COMPARED:
 {actions}

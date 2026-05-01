@@ -63,6 +63,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
         <ClarifyForm
+          threadId={selectedThreadId}
           onBack={onBack}
           onContinue={onContinue}
           onAutosave={onAutosaveClarify}

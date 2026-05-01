@@ -34,7 +34,7 @@ def _clean_fences(raw: str) -> str:
     return raw
 
 
-def _build_prompt(extraction_schema: dict, qa_pairs: list[dict]) -> str:
+def _build_prompt(extraction_schema: dict, qa_pairs: list[dict], thread_context: str = "") -> str:
     decision = extraction_schema.get("decision") or ""
     actions = extraction_schema.get("actions") or []
     action_labels = ", ".join(a.get("label", "") for a in actions if a.get("label")) or "(not specified)"
@@ -61,6 +61,11 @@ def _build_prompt(extraction_schema: dict, qa_pairs: list[dict]) -> str:
     else:
         qa_text = "(No pressure test answers recorded — founder skipped all scenarios)"
 
+    context_block = (
+        f"\nFOUNDER'S BACKGROUND (clarify form + pressure test):\n{thread_context}"
+        if thread_context.strip() else ""
+    )
+
     template = (_PROMPT_DIR / "decision_output_v1.0.0.txt").read_text(encoding="utf-8")
     return _fill_template(
         template,
@@ -70,10 +75,15 @@ def _build_prompt(extraction_schema: dict, qa_pairs: list[dict]) -> str:
         risks=risk_lines,
         confidence=str(confidence),
         qa_pairs=qa_text,
+        thread_context=context_block,
     )
 
 
-async def generate_decision_output(extraction_schema: dict, pressure_test: dict) -> dict | None:
+async def generate_decision_output(
+    extraction_schema: dict,
+    pressure_test: dict,
+    thread_context: str = "",
+) -> dict | None:
     """
     Generate a verdict from extraction schema + pressure test Q&A.
     Returns dict with all 9 DecisionOutputData fields, or None on failure.
@@ -93,7 +103,7 @@ async def generate_decision_output(extraction_schema: dict, pressure_test: dict)
         })
 
     try:
-        prompt = _build_prompt(extraction_schema, qa_pairs)
+        prompt = _build_prompt(extraction_schema, qa_pairs, thread_context=thread_context)
         raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=1500)
         parsed = json.loads(_clean_fences(raw))
 

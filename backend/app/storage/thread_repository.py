@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import datetime, timezone
 from typing import Any, Literal
@@ -195,6 +196,19 @@ async def create_thread(payload: dict[str, Any]) -> dict[str, Any]:
         return _decision_to_dict(decision)
 
 
+async def get_thread_context_data(thread_id: str) -> dict[str, Any] | None:
+    """Lightweight 2-column fetch for context building — no joins, no relations loaded."""
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision.clarify_draft, Decision.pressure_test)
+            .where(Decision.decision_id == thread_id)
+        )
+        row = result.first()
+        if row is None:
+            return None
+        return {"clarifyDraft": row[0] or {}, "pressureTest": row[1] or {}}
+
+
 async def get_thread_by_id(thread_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         result = await session.execute(
@@ -253,12 +267,223 @@ async def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str,
 
 
 # ---------------------------------------------------------------------------
-# Pressure test
+# Pressure test — v2 helpers
+# ---------------------------------------------------------------------------
+
+def _build_v2_state(ai_roots: list[dict[str, Any]]) -> dict[str, Any]:
+    """Construct a fresh v2 pressure_test state from pre-generated roots."""
+    root_scenarios = [
+        {
+            "id": i + 1,
+            "scenario_id": i + 1,
+            "failure_vector": root["failure_vector"],
+            "scenario": root["scenario"],
+            "question": root["question"],
+            "think_about": root.get("think_about", []),
+            "priority": root.get("priority", i + 1),
+            "probe_depth": root.get("probe_depth", 1),
+            "probes": [],
+            "status": "open",
+            "commitment": None,
+            "answer": None,
+            "metadata": {
+                "target_assumption_ids": [],
+                "target_risk_ids": [],
+                "sensitivity_vars": [],
+            },
+        }
+        for i, root in enumerate(ai_roots)
+    ]
+    return {
+        "rootScenarios": root_scenarios,
+        "responses_summary": {
+            "testedAssumptions": [],
+            "unresolvedRisks": [],
+            "commitmentQuality": "",
+        },
+        "enriched": False,
+        "lastEnrichedAt": None,
+        "completed": False,
+        "synthesized": False,
+        "summary": None,
+        "updatedAt": _now_iso(),
+    }
+
+
+def _select_enrichment_targets(schema: dict) -> dict[str, dict[str, Any]]:
+    """
+    Deterministically assign schema elements to the three failure vectors.
+    Returns {vector: {ids, labels}} used to patch root metadata.
+    Enforces diversity: each vector gets a distinct top candidate.
+    """
+    # execution: highest-fragility assumption
+    assumptions = sorted(
+        (a for a in (schema.get("assumptions") or []) if isinstance(a, dict)),
+        key=lambda a: float(a.get("fragility", 0)),
+        reverse=True,
+    )
+    used_assumption_ids: set[str] = set()
+    exec_ids: list[str] = []
+    exec_vars: list[str] = []
+    if assumptions:
+        top = assumptions[0]
+        aid = str(top.get("id") or top.get("text", "")[:30])
+        exec_ids = [aid]
+        used_assumption_ids.add(aid)
+
+    # financial: highest-severity risk tagged financial, or highest-sensitivity variable
+    risks = sorted(
+        (r for r in (schema.get("risks") or []) if isinstance(r, dict)),
+        key=lambda r: float(r.get("severity", 0)),
+        reverse=True,
+    )
+    variables = schema.get("variables") or []
+    fin_risk_ids: list[str] = []
+    fin_vars: list[str] = []
+    used_risk_ids: set[str] = set()
+    for r in risks:
+        rid = str(r.get("id") or r.get("text", "")[:30])
+        if rid not in used_risk_ids:
+            fin_risk_ids = [rid]
+            used_risk_ids.add(rid)
+            break
+    if not fin_risk_ids and variables:
+        fin_vars = [str(variables[0].get("id") or variables[0].get("name", ""))]
+
+    # external: first hidden_dep, else first constraint from schema
+    hidden_deps = schema.get("hidden_deps") or []
+    ext_vars: list[str] = []
+    if hidden_deps:
+        dep = hidden_deps[0]
+        ext_vars = [str(dep)[:80] if isinstance(dep, str) else str(dep.get("dependency") or dep.get("text", ""))[:80]]
+
+    return {
+        "execution": {"target_assumption_ids": exec_ids, "target_risk_ids": [], "sensitivity_vars": exec_vars},
+        "financial": {"target_assumption_ids": [], "target_risk_ids": fin_risk_ids, "sensitivity_vars": fin_vars},
+        "external": {"target_assumption_ids": [], "target_risk_ids": [], "sensitivity_vars": ext_vars},
+    }
+
+
+async def _run_extraction_and_enrich(thread_id: str, clarify_draft: dict) -> None:
+    """
+    Background task: run extraction and patch rootScenarios metadata.
+    Patch-only — never overwrites existing answers or probes.
+    """
+    from app.extraction.pipeline import compose_draft_input, run_extraction
+
+    user_input = compose_draft_input(clarify_draft)
+    if len(user_input.strip()) <= 20:
+        return
+
+    try:
+        schema = await run_extraction(user_input)
+        if schema.get("status") == "clarification_needed":
+            return
+
+        targets = _select_enrichment_targets(schema)
+
+        async with get_async_session() as session:
+            result = await session.execute(
+                select(Decision).where(Decision.decision_id == thread_id)
+            )
+            decision = result.scalar_one_or_none()
+            if decision is None:
+                return
+
+            pt = dict(decision.pressure_test or {})
+            if "rootScenarios" not in pt:
+                # PT was regenerated as v1 in the meantime; just cache the schema
+                if not decision.extraction_schema:
+                    decision.extraction_schema = schema
+                    decision.updated_at = _now()
+                    await session.commit()
+                return
+
+            # Patch each root's metadata; preserve answers and probes
+            root_scenarios = [dict(r) for r in pt["rootScenarios"]]
+            for root in root_scenarios:
+                vector = root.get("failure_vector", "")
+                patch = targets.get(vector, {})
+                if patch:
+                    root["metadata"] = {
+                        "target_assumption_ids": patch.get("target_assumption_ids", []),
+                        "target_risk_ids": patch.get("target_risk_ids", []),
+                        "sensitivity_vars": patch.get("sensitivity_vars", []),
+                    }
+
+            pt["rootScenarios"] = root_scenarios
+            pt["enriched"] = True
+            pt["lastEnrichedAt"] = _now_iso()
+            pt["updatedAt"] = _now_iso()
+
+            if not decision.extraction_schema:
+                decision.extraction_schema = schema
+
+            decision.pressure_test = pt
+            decision.updated_at = _now()
+            await session.commit()
+            logger.info("enrichment completed for thread %s", thread_id)
+
+    except Exception:
+        logger.warning("_run_extraction_and_enrich failed for thread %s", thread_id, exc_info=True)
+
+
+async def _synthesize_and_persist(thread_id: str) -> None:
+    """Background task: run synthesis and store summary in pressure_test."""
+    from app.pressure_test.synthesizer import synthesize_pressure_test
+
+    try:
+        async with get_async_session() as session:
+            result = await session.execute(
+                select(Decision).where(Decision.decision_id == thread_id)
+            )
+            decision = result.scalar_one_or_none()
+            if decision is None:
+                return
+
+            pt = dict(decision.pressure_test or {})
+            if "rootScenarios" not in pt or pt.get("synthesized"):
+                return
+
+            summary = await synthesize_pressure_test(pt, decision.extraction_schema)
+            if summary:
+                pt["summary"] = summary
+                pt["synthesized"] = True
+                pt["updatedAt"] = _now_iso()
+                decision.pressure_test = pt
+                decision.updated_at = _now()
+                await session.commit()
+                logger.info("synthesis completed for thread %s", thread_id)
+    except Exception:
+        logger.warning("_synthesize_and_persist failed for thread %s", thread_id, exc_info=True)
+
+
+def _find_open_root(root_scenarios: list[dict]) -> dict | None:
+    """Return the first root with status 'open' or 'probing'."""
+    for root in root_scenarios:
+        if root.get("status") in ("open", "probing"):
+            return root
+    return None
+
+
+def _find_open_probe(root: dict) -> dict | None:
+    """Return the first probe in a root with status 'open'."""
+    for probe in (root.get("probes") or []):
+        if probe.get("status") == "open":
+            return probe
+    return None
+
+
+def _all_roots_closed(root_scenarios: list[dict]) -> bool:
+    return all(r.get("status") == "closed" for r in root_scenarios)
+
+
+# ---------------------------------------------------------------------------
+# Pressure test — public API
 # ---------------------------------------------------------------------------
 
 async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
-    from app.extraction.pipeline import compose_draft_input, run_extraction
-    from app.pressure_test.generator import generate_scenarios
+    from app.pressure_test.generator import pre_generate_roots
 
     async with get_async_session() as session:
         result = await session.execute(
@@ -268,43 +493,19 @@ async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
         if decision is None:
             return None
 
+        clarify_draft = decision.clarify_draft or {}
+
         if decision.pressure_test is None:
-            # TODO: write path on first access — remove when Engine 2 gets explicit trigger.
-            extraction_schema = decision.extraction_schema
-
-            # Step 1: run extraction if not already stored
-            if not extraction_schema:
-                clarify_draft = decision.clarify_draft or {}
-                user_input = compose_draft_input(clarify_draft)
-                if len(user_input.strip()) > 20:
-                    try:
-                        result_schema = await run_extraction(user_input)
-                        if result_schema.get("status") != "clarification_needed":
-                            extraction_schema = result_schema
-                            decision.extraction_schema = extraction_schema
-                    except Exception:
-                        logger.warning("extraction failed for thread %s — using clarify draft fallback", thread_id, exc_info=True)
-
-            # Step 2: generate scenarios from extraction schema or clarify draft
-            source = extraction_schema or (decision.clarify_draft or {})
-            ai_scenarios = await generate_scenarios(source)
-
-            if ai_scenarios:
-                for i, s in enumerate(ai_scenarios, start=1):
-                    s["id"] = i
-                state: dict[str, Any] = {
-                    "scenarios": ai_scenarios,
-                    "currentIndex": 0,
-                    "responses": {},
-                    "completed": False,
-                    "updatedAt": _now_iso(),
-                }
-            else:
-                state = _create_default_pressure_state()
-
+            ai_roots = await pre_generate_roots(clarify_draft)
+            state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else _create_default_pressure_state()
             decision.pressure_test = state
             decision.updated_at = _now()
             await session.commit()
+
+        # Always kick off extraction if schema is missing — regardless of whether
+        # the pressure test was just created or already existed from pre-generation.
+        if not decision.extraction_schema:
+            asyncio.create_task(_run_extraction_and_enrich(thread_id, clarify_draft))
 
         return _decision_to_dict(decision)
 
@@ -320,11 +521,23 @@ async def get_pressure_test(thread_id: str) -> dict[str, Any] | None:
         return row[0]
 
 
+async def get_extraction_schema(thread_id: str) -> dict[str, Any] | None:
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision.extraction_schema).where(Decision.decision_id == thread_id)
+        )
+        row = result.first()
+        if row is None:
+            return None
+        return row[0]
+
+
 async def _advance_pressure_scenario(
     thread_id: str,
     scenario_id: int,
     response_entry: dict[str, Any],
 ) -> dict[str, Any] | None:
+    """v1 sequential advance — unchanged, used only for v1-shape pressure tests."""
     async with get_async_session() as session:
         result = await session.execute(
             select(Decision).where(Decision.decision_id == thread_id)
@@ -362,7 +575,121 @@ async def _advance_pressure_scenario(
         return new_pressure_test
 
 
-async def submit_pressure_answer(thread_id: str, scenario_id: int, answer: str) -> dict[str, Any] | None:
+async def _submit_pressure_answer_v2(
+    thread_id: str,
+    root_id: int,
+    answer: str,
+    probe_id: str | None = None,
+) -> dict[str, Any] | None:
+    """v2 answer flow: evaluator-driven, conditional probe generation, root status transitions."""
+    from app.pressure_test.evaluator import evaluate_answer
+    from app.pressure_test.generator import generate_follow_up
+
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id)
+        )
+        decision = result.scalar_one_or_none()
+        if decision is None:
+            return None
+
+        pt = dict(decision.pressure_test or {})
+        root_scenarios: list[dict] = [dict(r) for r in (pt.get("rootScenarios") or [])]
+
+        # Locate target root
+        root = next((r for r in root_scenarios if r.get("id") == root_id), None)
+        if root is None:
+            return pt
+
+        trimmed_answer = answer.strip()
+
+        if probe_id:
+            # Answering an existing probe
+            probes = [dict(p) for p in (root.get("probes") or [])]
+            probe = next((p for p in probes if p.get("id") == probe_id), None)
+            if probe is None:
+                return pt
+            probe["answer"] = trimmed_answer
+            probe["status"] = "answered"
+            root["probes"] = probes
+
+            # Evaluate the probe answer to decide whether to close the root
+            eval_result = await evaluate_answer(
+                probe.get("question", ""), trimmed_answer, root.get("failure_vector", "")
+            )
+            if eval_result.commitment:
+                root["commitment"] = eval_result.commitment
+            root["status"] = "closed"
+        else:
+            # Answering the root question
+            root["answer"] = trimmed_answer
+
+            eval_result = await evaluate_answer(
+                root.get("question", ""), trimmed_answer, root.get("failure_vector", "")
+            )
+            if eval_result.commitment:
+                root["commitment"] = eval_result.commitment
+
+            current_probe_count = len(root.get("probes") or [])
+            should_probe = (
+                eval_result.next_probe_type is not None
+                and current_probe_count < root.get("probe_depth", 1)
+            )
+
+            if should_probe:
+                follow_up_q = await generate_follow_up(
+                    root.get("question", ""),
+                    trimmed_answer,
+                    root.get("failure_vector", ""),
+                    eval_result.next_probe_type,
+                )
+                if follow_up_q:
+                    new_probe_id = f"{root_id}_{current_probe_count + 1}"
+                    new_probe: dict[str, Any] = {
+                        "id": new_probe_id,
+                        "parentId": str(root_id),
+                        "depth": current_probe_count + 1,
+                        "question": follow_up_q,
+                        "probeType": eval_result.next_probe_type,
+                        "status": "open",
+                        "answer": None,
+                    }
+                    root["probes"] = list(root.get("probes") or []) + [new_probe]
+                    root["status"] = "probing"
+                else:
+                    root["status"] = "closed"
+            else:
+                root["status"] = "closed"
+
+        # Write back the mutated root
+        for i, r in enumerate(root_scenarios):
+            if r.get("id") == root_id:
+                root_scenarios[i] = root
+                break
+
+        pt["rootScenarios"] = root_scenarios
+        pt["updatedAt"] = _now_iso()
+
+        if _all_roots_closed(root_scenarios):
+            pt["completed"] = True
+            asyncio.create_task(_synthesize_and_persist(thread_id))
+
+        decision.pressure_test = pt
+        decision.updated_at = _now()
+        await session.commit()
+
+        return pt
+
+
+async def submit_pressure_answer(
+    thread_id: str,
+    scenario_id: int,
+    answer: str,
+    probe_id: str | None = None,
+) -> dict[str, Any] | None:
+    pt = await get_pressure_test(thread_id)
+    if pt and "rootScenarios" in pt:
+        return await _submit_pressure_answer_v2(thread_id, scenario_id, answer, probe_id)
     return await _advance_pressure_scenario(
         thread_id,
         scenario_id,
@@ -370,12 +697,70 @@ async def submit_pressure_answer(thread_id: str, scenario_id: int, answer: str) 
     )
 
 
-async def skip_pressure_scenario(thread_id: str, scenario_id: int) -> dict[str, Any] | None:
+async def skip_pressure_scenario(
+    thread_id: str,
+    scenario_id: int,
+    probe_id: str | None = None,
+) -> dict[str, Any] | None:
+    pt = await get_pressure_test(thread_id)
+    if pt and "rootScenarios" in pt:
+        return await _skip_pressure_scenario_v2(thread_id, scenario_id, probe_id)
     return await _advance_pressure_scenario(
         thread_id,
         scenario_id,
         {"scenarioId": scenario_id, "answer": "", "skipped": True, "answeredAt": _now_iso()},
     )
+
+
+async def _skip_pressure_scenario_v2(
+    thread_id: str,
+    root_id: int,
+    probe_id: str | None = None,
+) -> dict[str, Any] | None:
+    """v2 skip: closes the current root (or probe) and moves to next open root."""
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id)
+        )
+        decision = result.scalar_one_or_none()
+        if decision is None:
+            return None
+
+        pt = dict(decision.pressure_test or {})
+        root_scenarios: list[dict] = [dict(r) for r in (pt.get("rootScenarios") or [])]
+
+        root = next((r for r in root_scenarios if r.get("id") == root_id), None)
+        if root is None:
+            return pt
+
+        if probe_id:
+            probes = [dict(p) for p in (root.get("probes") or [])]
+            for probe in probes:
+                if probe.get("id") == probe_id:
+                    probe["status"] = "skipped"
+            root["probes"] = probes
+            # Close root since user chose to skip the follow-up
+            root["status"] = "closed"
+        else:
+            root["status"] = "closed"
+
+        for i, r in enumerate(root_scenarios):
+            if r.get("id") == root_id:
+                root_scenarios[i] = root
+                break
+
+        pt["rootScenarios"] = root_scenarios
+        pt["updatedAt"] = _now_iso()
+
+        if _all_roots_closed(root_scenarios):
+            pt["completed"] = True
+            asyncio.create_task(_synthesize_and_persist(thread_id))
+
+        decision.pressure_test = pt
+        decision.updated_at = _now()
+        await session.commit()
+
+        return pt
 
 
 # ---------------------------------------------------------------------------
@@ -660,7 +1045,9 @@ async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
 
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision).where(Decision.decision_id == thread_id)
+            select(Decision)
+            .where(Decision.decision_id == thread_id)
+            .options(selectinload(Decision.simulation_runs), selectinload(Decision.failure_analysis))
         )
         decision = result.scalar_one_or_none()
         if not decision:
@@ -674,7 +1061,13 @@ async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
         extraction_schema = decision.extraction_schema
         pressure_test = decision.pressure_test
         if extraction_schema and pressure_test and pressure_test.get("completed"):
-            output = await generate_decision_output(extraction_schema, pressure_test)
+            from app.thread_context import build_thread_context
+            ctx = build_thread_context({
+                "clarifyDraft": decision.clarify_draft or {},
+                "pressureTest": pressure_test,
+                "extractionSchema": extraction_schema,
+            })
+            output = await generate_decision_output(extraction_schema, pressure_test, thread_context=ctx)
             if output:
                 # Inject decisionTitle from thread for frontend compatibility
                 output.setdefault("decisionTitle", (decision.clarify_draft or {}).get("title") or decision.title)

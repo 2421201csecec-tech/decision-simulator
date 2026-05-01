@@ -71,12 +71,15 @@ async def generate_explanation(
     confidence: float,
     key_variable_id: str | None,
     user_values: dict[str, float] | None = None,
+    thread_context: str = "",
 ) -> dict | None:
     """Generate verdict, key_assumption, and per-case bullet arrays.
 
     options[] contains all 9 metrics per option. key_variable_id is computed
     by sensitivity analysis. user_values lets the LLM reference real-world
     numbers in bullets instead of generic statements.
+    thread_context carries the founder's clarify form + pressure test responses
+    so the LLM can ground bullets in what was already tested and stated.
     Returns None on hard failure (missing verdict/key_assumption).
     """
     if not options:
@@ -95,12 +98,18 @@ async def generate_explanation(
         for a in actions_list
     ) or "  (no actions listed)"
 
+    context_block = (
+        f"\nFOUNDER'S BACKGROUND (clarify form + pressure test):\n{thread_context}"
+        if thread_context.strip() else ""
+    )
+
     template = (_PROMPT_DIR / "simulation_explain_v1.0.0.txt").read_text(encoding="utf-8")
     prompt = _fill_template(
         template,
         decision=schema.get("decision") or "(not specified)",
         actions=actions_text,
         user_values_text=user_values_text,
+        thread_context=context_block,
         winner_label=winner.get("label") or winner.get("id") or "Option A",
         winner_score=str(round(float(winner.get("score", 0)), 3)),
         winner_mean=str(round(float(winner.get("mean", 0)), 3)),

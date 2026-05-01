@@ -21,11 +21,22 @@ async def get_decision_output(thread_id: str) -> JSONResponse:
 class GenerateVerdictRequest(BaseModel):
     extraction_schema: dict
     pressure_test: dict
+    thread_id: str | None = None
 
 
 @router.post("/decision-output/generate")
 async def post_generate_verdict(req: GenerateVerdictRequest) -> JSONResponse:
-    output = await generate_decision_output(req.extraction_schema, req.pressure_test)
+    thread_context = ""
+    if req.thread_id:
+        from app.storage.thread_store import get_thread_context_data
+        from app.thread_context import build_thread_context
+        ctx_data = await get_thread_context_data(req.thread_id)
+        if ctx_data:
+            thread_context = build_thread_context({
+                **ctx_data,
+                "extractionSchema": req.extraction_schema,
+            })
+    output = await generate_decision_output(req.extraction_schema, req.pressure_test, thread_context=thread_context)
     if output is None:
         return JSONResponse({"message": "Generation failed"}, status_code=503)
     return JSONResponse(output)

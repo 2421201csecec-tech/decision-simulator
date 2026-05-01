@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const existing = await getPressureTest(threadId);
   if (!existing) {
-    return errorResponse("Pressure test not found", 404);
+    return errorResponse("Backend temporarily unavailable, please retry", 503);
   }
 
   const currentScenario = existing.scenarios[existing.currentIndex];

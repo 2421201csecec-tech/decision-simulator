@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, Plus, ArrowRight, X, FileText, FileSpreadsheet, File } from "lucide-react";
+import { generatePressureTest } from "@/lib/api/threads";
 
 interface UploadedFile {
   name: string;
@@ -10,6 +11,7 @@ interface UploadedFile {
 }
 
 interface ClarifyFormProps {
+  threadId?: string | null;
   onBack: () => void;
   onContinue: (data: any) => void;
   onAutosave?: (data: any) => Promise<void> | void;
@@ -25,7 +27,7 @@ interface ClarifyFormProps {
   };
 }
 
-export function ClarifyForm({ onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData }: ClarifyFormProps) {
+export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData }: ClarifyFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [coreProblem, setCoreProblem] = useState(initialData?.coreProblem || "");
   const [desiredOutcome, setDesiredOutcome] = useState(initialData?.desiredOutcome || "");
@@ -40,6 +42,7 @@ export function ClarifyForm({ onBack, onContinue, onAutosave, onDraftChange, aut
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasMountedRef = useRef(false);
   const lastQueuedPayloadRef = useRef<string>("");
+  const preGeneratedRef = useRef(false);
 
   const draftPayload = useMemo(
     () => ({
@@ -52,6 +55,21 @@ export function ClarifyForm({ onBack, onContinue, onAutosave, onDraftChange, aut
     }),
     [title, coreProblem, desiredOutcome, context, constraints, assumptions]
   );
+
+  // 3s debounce on context field → silently pre-generate pressure test roots
+  useEffect(() => {
+    if (!threadId || preGeneratedRef.current) return;
+    if (title.length < 6 || coreProblem.length < 15 || context.length < 10) return;
+
+    const timer = window.setTimeout(() => {
+      preGeneratedRef.current = true;
+      generatePressureTest(threadId).catch(() => {
+        preGeneratedRef.current = false;
+      });
+    }, 10000);
+
+    return () => window.clearTimeout(timer);
+  }, [context, threadId, title.length, coreProblem.length]);
 
   useEffect(() => {
     if (!onAutosave) return;
@@ -399,6 +417,12 @@ export function ClarifyForm({ onBack, onContinue, onAutosave, onDraftChange, aut
         <div className="flex justify-end pt-4 pb-6">
           <button
             onClick={() => {
+              if (threadId && !preGeneratedRef.current) {
+                preGeneratedRef.current = true;
+                generatePressureTest(threadId).catch(() => {
+                  preGeneratedRef.current = false;
+                });
+              }
               onContinue(draftPayload);
             }}
             className="px-6 py-2.5 bg-accent text-accent-foreground rounded-full text-sm font-medium hover:bg-accent/90 transition-colors flex items-center gap-2 shadow-lg shadow-accent/20"

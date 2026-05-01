@@ -26,12 +26,43 @@ export interface PressureResponse {
   answeredAt: string;
 }
 
+// v2 types — present when backend returns rootScenarios
+export interface RootProbe {
+  id: string;
+  parentId: string;
+  depth: number;
+  question: string;
+  probeType: string;
+  status: "open" | "answered" | "skipped";
+  answer: string | null;
+}
+
+export interface RootScenario {
+  id: number;
+  failure_vector: "execution" | "financial" | "external";
+  scenario: string;
+  question: string;
+  think_about: string[];
+  priority: number;
+  probe_depth: number;
+  probes: RootProbe[];
+  status: "open" | "probing" | "closed";
+  commitment: string | null;
+  answer: string | null;
+}
+
 export interface PressureTestState {
+  // v1 fields (kept for backward compat — present when backend returns flat scenarios)
   scenarios: PressureScenario[];
   currentIndex: number;
   responses: Record<string, PressureResponse>;
   completed: boolean;
   updatedAt: string;
+  // v2 fields (optional — present when backend returns rootScenarios)
+  rootScenarios?: RootScenario[];
+  enriched?: boolean;
+  synthesized?: boolean;
+  summary?: Record<string, unknown> | null;
 }
 
 export interface SimulationVariableSet {
