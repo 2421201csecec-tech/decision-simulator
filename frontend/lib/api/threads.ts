@@ -158,6 +158,18 @@ export interface DecisionOutputData {
   suggestedExperiment: string;
 }
 
+export interface AssumptionGap {
+  text: string;
+  verdict: "held" | "partial" | "broke";
+  why: string;
+}
+
+export interface FailureLesson {
+  statement: string;
+  patternType: string;
+  isNew: boolean;
+}
+
 export interface FailureAnalysisData {
   whatHappened: string;
   observations: string[];
@@ -167,7 +179,22 @@ export interface FailureAnalysisData {
   cognitiveBias: string;
   missedVariable: string;
   recommendation: string;
+  failureType?: "assumption" | "execution" | "external_shock" | "framing" | null;
+  assumptionGaps?: AssumptionGap[] | null;
+  lessons?: FailureLesson[] | null;
+  snapshot?: Record<string, unknown> | null;
   updatedAt: string;
+}
+
+export interface PatternProfile {
+  patterns: Array<{
+    pattern: string;
+    pattern_type: string;
+    seen_in: string[];
+    count: number;
+    first_seen: string;
+    last_seen: string;
+  }>;
 }
 
 interface ApiErrorPayload {
@@ -336,9 +363,19 @@ export async function fetchFailureAnalysis(threadId: string): Promise<FailureAna
   return data.failureAnalysis;
 }
 
+export interface FailureIntakePayload {
+  whatHappened: string;
+  expectedOutcome: string;
+  whatDid: string;
+  biggestSurprise: string;
+  observations: string[];
+  failedAssumptions: string[];
+  rootCause: string;
+}
+
 export async function saveFailureAnalysis(
   threadId: string,
-  payload: Pick<FailureAnalysisData, "whatHappened" | "observations" | "failedAssumptions" | "rootCause">
+  payload: FailureIntakePayload
 ): Promise<FailureAnalysisData> {
   const response = await fetch(`/api/threads/${threadId}/failure-analysis`, {
     method: "PUT",
@@ -349,6 +386,14 @@ export async function saveFailureAnalysis(
   if (!response.ok) return parseApiError(response, "Failed to save failure analysis");
   const data = await response.json();
   return data.failureAnalysis;
+}
+
+export async function fetchPatternProfile(threadId: string): Promise<PatternProfile> {
+  const response = await fetch(`/api/threads/${threadId}/pattern-profile`, {
+    cache: "no-store",
+  });
+  if (!response.ok) return { patterns: [] };
+  return response.json();
 }
 
 export interface DraftInsights {

@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 import logging
 
 from app.db.engine import get_async_session
-from app.models.decision import Decision, FailureAnalysis, SimulationRun
+from app.models.decision import Decision, FailureAnalysis, PatternProfile, SimulationRun
 
 logger = logging.getLogger("thread_repository")
 
@@ -113,6 +113,10 @@ def _fa_to_dict(fa: FailureAnalysis) -> dict[str, Any]:
         "cognitiveBias": fa.cognitive_bias,
         "missedVariable": fa.missed_variable,
         "recommendation": fa.recommendation,
+        "failureType": fa.failure_type,
+        "assumptionGaps": fa.assumption_gaps,
+        "lessons": fa.lessons,
+        "snapshot": fa.snapshot,
         "updatedAt": _format_dt(fa.updated_at),
     }
 
@@ -496,7 +500,8 @@ async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
         clarify_draft = decision.clarify_draft or {}
 
         if decision.pressure_test is None:
-            ai_roots = await pre_generate_roots(clarify_draft)
+            weak_spots = await get_weak_spots("default_user")
+            ai_roots = await pre_generate_roots(clarify_draft, weak_spots=weak_spots or None)
             state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else _create_default_pressure_state()
             decision.pressure_test = state
             decision.updated_at = _now()
@@ -1085,115 +1090,90 @@ async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
 # Failure analysis
 # ---------------------------------------------------------------------------
 
-def _derive_failure_insights(
-    what_happened: str,
-    observations: list[str],
-    failed_assumptions: list[str],
-    root_cause: str,
-) -> dict[str, str]:
-    signal = f"{what_happened} {root_cause} {' '.join(observations)} {' '.join(failed_assumptions)}".lower()
+def _enrich_snapshot_assumptions(clarify_draft: dict, extraction_schema: dict | None) -> dict:
+    """Return clarify_draft with assumptions enriched from extraction_schema when draft has none."""
+    snapshot = dict(clarify_draft or {})
+    if snapshot.get("assumptions"):
+        return snapshot
 
-    if "price" in signal or "pricing" in signal:
-        likely_root_cause = "Overestimated willingness to pay"
-    elif "execution" in signal:
-        likely_root_cause = "Execution mismatch between plan and rollout"
-    else:
-        likely_root_cause = "Mismatch between assumptions and real-world response"
+    # Fall back to extraction schema assumptions (LLM-derived with fragility scores)
+    if extraction_schema:
+        schema_assumptions = extraction_schema.get("assumptions") or []
+        if schema_assumptions:
+            texts = [
+                a.get("text") or a.get("statement") or ""
+                for a in schema_assumptions
+                if isinstance(a, dict)
+            ]
+            snapshot["assumptions"] = [t for t in texts if t]
 
-    cognitive_bias = (
-        "Overconfidence bias detected"
-        if "assum" in signal or "confident" in signal
-        else "Confirmation bias risk detected"
-    )
-
-    if "competitor" in signal:
-        missed_variable = "Competitor pricing dynamics"
-    elif "market" in signal:
-        missed_variable = "Market demand volatility"
-    else:
-        missed_variable = "External environment shift"
-
-    recommendation = (
-        "Test pricing ladder: Rs 1499 / Rs 1999 / Rs 2499"
-        if "price" in signal
-        else "Run a controlled experiment with smaller rollout and explicit success criteria."
-    )
-
-    return {
-        "likelyRootCause": likely_root_cause,
-        "cognitiveBias": cognitive_bias,
-        "missedVariable": missed_variable,
-        "recommendation": recommendation,
-    }
+    return snapshot
 
 
 async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         decision_result = await session.execute(
-            select(Decision.decision_id, Decision.clarify_draft)
+            select(Decision.decision_id, Decision.clarify_draft, Decision.extraction_schema)
             .where(Decision.decision_id == thread_id)
         )
         row = decision_result.first()
         if row is None:
             return None
 
+        clarify_draft, extraction_schema = row[1], row[2]
+
         fa_result = await session.execute(
             select(FailureAnalysis).where(FailureAnalysis.decision_id == thread_id)
         )
         fa = fa_result.scalar_one_or_none()
 
-        # TODO: return default without persisting — GET should not write.
-        #       Remove this block when Engine 5 introduces the real write path.
         if fa is None:
-            clarify_draft = row[1] or {}
-            assumptions = clarify_draft.get("assumptions") or []
+            snapshot = _enrich_snapshot_assumptions(clarify_draft or {}, extraction_schema)
             fa = FailureAnalysis(
                 id=str(uuid4()),
                 decision_id=thread_id,
                 what_happened="",
-                observations=[
-                    "Market rejected pricing",
-                    "Competitor launched cheaper alternative",
-                    "Users did not see enough value",
-                ],
-                failed_assumptions=assumptions[:2] if assumptions else [
-                    "Users would accept premium pricing",
-                    "Brand perceived as premium",
-                ],
+                observations=[],
+                failed_assumptions=[],
                 root_cause="",
-                likely_root_cause="Overestimated willingness to pay",
-                cognitive_bias="Overconfidence bias detected",
-                missed_variable="Competitor pricing dynamics",
-                recommendation="Test pricing ladder: Rs 1499 / Rs 1999 / Rs 2499",
+                likely_root_cause="",
+                cognitive_bias="",
+                missed_variable="",
+                recommendation="",
+                snapshot=snapshot,
                 updated_at=_now(),
             )
             session.add(fa)
+            await session.commit()
+        elif fa.snapshot is None:
+            fa.snapshot = _enrich_snapshot_assumptions(clarify_draft or {}, extraction_schema)
             await session.commit()
 
         return _fa_to_dict(fa)
 
 
 async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    from app.failure.analyzer import analyze_gaps, extract_lessons
+
     async with get_async_session() as session:
-        check = await session.execute(
+        decision_result = await session.execute(
             select(Decision.decision_id).where(Decision.decision_id == thread_id)
         )
-        if check.scalar_one_or_none() is None:
+        if decision_result.scalar_one_or_none() is None:
             return None
-
-        derived = _derive_failure_insights(
-            payload.get("whatHappened", ""),
-            payload.get("observations") or [],
-            payload.get("failedAssumptions") or [],
-            payload.get("rootCause", ""),
-        )
-
-        now = _now()
 
         fa_result = await session.execute(
             select(FailureAnalysis).where(FailureAnalysis.decision_id == thread_id)
         )
         fa = fa_result.scalar_one_or_none()
+        snapshot = (fa.snapshot if fa is not None else None) or {}
+
+        # LLM gap analysis — falls back gracefully on failure
+        gap_result = await analyze_gaps(snapshot, payload)
+        existing_patterns = await _get_pattern_list("default_user", session)
+        lessons = await extract_lessons(gap_result or {}, existing_patterns)
+
+        now = _now()
 
         if fa is None:
             fa = FailureAnalysis(
@@ -1203,10 +1183,14 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
                 observations=payload.get("observations") or [],
                 failed_assumptions=payload.get("failedAssumptions") or [],
                 root_cause=payload.get("rootCause", ""),
-                likely_root_cause=derived["likelyRootCause"],
-                cognitive_bias=derived["cognitiveBias"],
-                missed_variable=derived["missedVariable"],
-                recommendation=derived["recommendation"],
+                likely_root_cause=(gap_result or {}).get("likely_root_cause", ""),
+                cognitive_bias=(gap_result or {}).get("cognitive_bias", ""),
+                missed_variable=(gap_result or {}).get("missed_variable", ""),
+                recommendation=(gap_result or {}).get("recommendation", ""),
+                failure_type=(gap_result or {}).get("failure_type"),
+                assumption_gaps=(gap_result or {}).get("assumption_gaps"),
+                lessons=lessons or None,
+                snapshot=snapshot,
                 updated_at=now,
             )
             session.add(fa)
@@ -1215,10 +1199,14 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
             fa.observations = payload.get("observations") or []
             fa.failed_assumptions = payload.get("failedAssumptions") or []
             fa.root_cause = payload.get("rootCause", "")
-            fa.likely_root_cause = derived["likelyRootCause"]
-            fa.cognitive_bias = derived["cognitiveBias"]
-            fa.missed_variable = derived["missedVariable"]
-            fa.recommendation = derived["recommendation"]
+            fa.likely_root_cause = (gap_result or {}).get("likely_root_cause", fa.likely_root_cause)
+            fa.cognitive_bias = (gap_result or {}).get("cognitive_bias", fa.cognitive_bias)
+            fa.missed_variable = (gap_result or {}).get("missed_variable", fa.missed_variable)
+            fa.recommendation = (gap_result or {}).get("recommendation", fa.recommendation)
+            fa.failure_type = (gap_result or {}).get("failure_type", fa.failure_type)
+            fa.assumption_gaps = (gap_result or {}).get("assumption_gaps", fa.assumption_gaps)
+            if lessons:
+                fa.lessons = lessons
             fa.updated_at = now
 
         await session.execute(
@@ -1228,7 +1216,86 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
         )
         await session.commit()
 
+        # Write lessons to pattern profile (fire-and-forget — does not block response)
+        if lessons:
+            asyncio.create_task(_write_lessons_to_pattern_profile("default_user", lessons, thread_id))
+
         return _fa_to_dict(fa)
+
+
+async def _get_pattern_list(user_id: str, session: Any) -> list[dict]:
+    result = await session.execute(
+        select(PatternProfile.patterns).where(PatternProfile.user_id == user_id)
+    )
+    row = result.first()
+    return list(row[0] or []) if row else []
+
+
+async def _write_lessons_to_pattern_profile(user_id: str, lessons: list[dict], decision_id: str) -> None:
+    try:
+        async with get_async_session() as session:
+            result = await session.execute(
+                select(PatternProfile).where(PatternProfile.user_id == user_id)
+            )
+            profile = result.scalar_one_or_none()
+            now = _now()
+
+            if profile is None:
+                patterns: list[dict] = []
+                profile = PatternProfile(
+                    user_id=user_id,
+                    patterns=patterns,
+                    updated_at=now,
+                    created_at=now,
+                    version=1,
+                )
+                session.add(profile)
+            else:
+                patterns = list(profile.patterns or [])
+
+            now_iso = now.isoformat()
+            for lesson in lessons:
+                ptype = lesson.get("pattern_type", "")
+                existing = next((p for p in patterns if p.get("pattern_type") == ptype), None)
+                if existing:
+                    existing["count"] = existing.get("count", 1) + 1
+                    seen = existing.get("seen_in") or []
+                    if decision_id not in seen:
+                        seen.append(decision_id)
+                    existing["seen_in"] = seen
+                    existing["last_seen"] = now_iso
+                    existing["pattern"] = lesson.get("statement", existing.get("pattern", ""))
+                else:
+                    patterns.append({
+                        "pattern": lesson.get("statement", ""),
+                        "pattern_type": ptype,
+                        "seen_in": [decision_id],
+                        "count": 1,
+                        "first_seen": now_iso,
+                        "last_seen": now_iso,
+                    })
+
+            profile.patterns = patterns
+            profile.updated_at = now
+            await session.commit()
+    except Exception:
+        logger.warning("write_lessons_to_pattern_profile failed", exc_info=True)
+
+
+async def get_pattern_profile(user_id: str) -> dict[str, Any]:
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(PatternProfile).where(PatternProfile.user_id == user_id)
+        )
+        profile = result.scalar_one_or_none()
+        if profile is None:
+            return {"patterns": []}
+        return {"patterns": profile.patterns or []}
+
+
+async def get_weak_spots(user_id: str) -> list[dict]:
+    profile = await get_pattern_profile(user_id)
+    return [p for p in profile.get("patterns", []) if p.get("count", 0) >= 2]
 
 
 # ---------------------------------------------------------------------------

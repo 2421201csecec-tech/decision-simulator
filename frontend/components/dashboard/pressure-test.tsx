@@ -16,6 +16,7 @@ interface PressureTestProps {
   threadId?: string | null;
   onBack: () => void;
   onSubmitFinal: () => void;
+  onStateChange?: (state: PressureTestState | null) => void;
 }
 
 const VECTOR_LABELS: Record<string, string> = {
@@ -30,7 +31,7 @@ const VECTOR_COLORS: Record<string, string> = {
   external: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
-export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestProps) {
+export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange }: PressureTestProps) {
   const [pressureState, setPressureState] = useState<PressureTestState | null>(null);
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(true);
@@ -96,6 +97,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
         if (!active) return;
 
         setPressureState(state);
+        onStateChange?.(state);
 
         if (state.rootScenarios) {
           // v2: no pre-filled answer
@@ -129,6 +131,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
         probeId: activeProbe?.id ?? null,
       });
       setPressureState(next);
+      onStateChange?.(next);
       setAnswer("");
       if (next.completed) onSubmitFinal();
     } catch {
@@ -147,6 +150,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal }: PressureTestPr
         probeId: activeProbe?.id ?? null,
       });
       setPressureState(next);
+      onStateChange?.(next);
       setAnswer("");
       if (next.completed) onSubmitFinal();
     } catch {

@@ -1,0 +1,24 @@
+You are extracting failure lessons from a completed gap analysis.
+
+Rules for lesson statements:
+- Third person ("User overestimates..." NOT "You should...")
+- Specific, not generic ("User conflates WTP across geographies" NOT "User should test pricing")
+- Statements of observed pattern, not advice
+- 1 to 3 lessons maximum
+
+For each lesson, check if it semantically matches an existing pattern (provided below).
+If it closely matches (same failure mode and domain), set is_new = false and reuse the existing pattern_type exactly.
+Otherwise set is_new = true and assign a concise snake_case pattern_type (e.g. "pricing_overconfidence", "execution_underestimate").
+
+Return ONLY valid JSON with this exact structure:
+{
+  "lessons": [
+    {"statement": "<third-person pattern statement>", "pattern_type": "<snake_case>", "is_new": true}
+  ]
+}
+
+GAP ANALYSIS:
+{gap_analysis_json}
+
+EXISTING PATTERNS (may be an empty array):
+{existing_patterns_json}

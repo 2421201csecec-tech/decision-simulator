@@ -68,10 +68,13 @@ def _validate_roots(raw_list: list) -> list[dict]:
     return result
 
 
-async def pre_generate_roots(clarify_draft: dict) -> list[dict]:
+async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None = None) -> list[dict]:
     """
     Fast pre-generation of 3 root scenarios (execution / financial / external)
     from a clarify draft. One LLM call, returns normalised root dicts.
+
+    weak_spots: patterns from PatternProfile where count >= 2. When present,
+    at least 2 of the 3 scenarios are biased toward the founder's known failure modes.
 
     Returns [] if draft is too thin or LLM fails.
     """
@@ -85,6 +88,11 @@ async def pre_generate_roots(clarify_draft: dict) -> list[dict]:
     constraints = clarify_draft.get("constraints") or []
     assumptions = clarify_draft.get("assumptions") or []
 
+    if weak_spots:
+        weak_spots_text = "\n".join(f"- {p['pattern']}" for p in weak_spots[:3])
+    else:
+        weak_spots_text = "(none — generate scenarios based on stated assumptions only)"
+
     template = (_PROMPT_DIR / "pre_generate_v1.0.0.txt").read_text(encoding="utf-8")
     prompt = _fill_template(
         template,
@@ -93,6 +101,7 @@ async def pre_generate_roots(clarify_draft: dict) -> list[dict]:
         context=str(clarify_draft.get("context") or "(not provided)"),
         constraints=", ".join(str(c) for c in constraints) if constraints else "(none)",
         assumptions=", ".join(str(a) for a in assumptions) if assumptions else "(none)",
+        weak_spots=weak_spots_text,
     )
 
     temperature = 0.4

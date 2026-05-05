@@ -6,6 +6,9 @@ CONTEXT: {context}
 CONSTRAINTS: {constraints}
 ASSUMPTIONS: {assumptions}
 
+KNOWN WEAK SPOTS (from previous failed decisions — if present, at least 2 scenarios MUST target these patterns):
+{weak_spots}
+
 TASK: Generate exactly 3 scenarios — one per failure vector: execution, financial, external.
 
 Rules:

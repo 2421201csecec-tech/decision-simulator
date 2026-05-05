@@ -74,6 +74,10 @@ class FailureAnalysis(Base):
     cognitive_bias = Column(Text, nullable=False, default="")
     missed_variable = Column(Text, nullable=False, default="")
     recommendation = Column(Text, nullable=False, default="")
+    failure_type = Column(String, nullable=True)
+    assumption_gaps = Column(JSON, nullable=True)
+    lessons = Column(JSON, nullable=True)
+    snapshot = Column(JSON, nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=False)
 
     decision = relationship("Decision", back_populates="failure_analysis", lazy="raise")
@@ -85,6 +89,7 @@ class PatternProfile(Base):
     user_id = Column(String, primary_key=True)
     patterns = Column(JSON, nullable=False, default=list)
     updated_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=True)
     version = Column(Integer, nullable=False, default=1)
 
 

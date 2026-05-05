@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import numpy as np
 
-LAMBDA1 = 0.30  # std penalty
-LAMBDA2 = 0.40  # downside probability penalty
-LAMBDA3 = 0.20  # CVaR penalty
-LAMBDA4 = 0.10  # upside bonus
+# This module implements the aggregation logic for simulation utilities, 
+# combining multiple metrics into a single score for ranking actions.
+
+# Score = Mean - L1·StdDev - L2·Downside% - L3·|CVaR| + L4·Upside%
+# L1/L2/L4 per spec §4.8. L3 (CVaR tail) added per Pattern Engine v2 §8 —
+# pattern engine raises L3 for founders with catastrophic tail history.
+L1 = 0.30   # volatility penalty
+L2 = 0.40   # downside probability penalty
+L3 = 0.10   # CVaR tail penalty (pattern engine adjustable, max +50%)
+L4 = 0.20   # upside bonus (pattern engine adjustable, max -40%)
 
 
 def aggregate(utilities: np.ndarray) -> dict:
@@ -13,12 +19,13 @@ def aggregate(utilities: np.ndarray) -> dict:
     std_u = float(np.std(utilities))
     downside = float(np.mean(utilities < 0))
 
+# CVaR (Conditional Value at Risk) at 5% level
     p5 = np.percentile(utilities, 5)
     tail = utilities[utilities <= p5]
     cvar = float(np.mean(tail)) if len(tail) > 0 else float(p5)
 
     upside = float(np.mean(utilities > 0.5))
-    score = mean_u - LAMBDA1 * std_u - LAMBDA2 * downside - LAMBDA3 * abs(cvar) + LAMBDA4 * upside
+    score = mean_u - L1 * std_u - L2 * downside - L3 * abs(cvar) + L4 * upside
 
     p80 = np.percentile(utilities, 80)
     p20 = np.percentile(utilities, 20)

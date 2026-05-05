@@ -15,7 +15,9 @@ export async function GET(_: NextRequest, { params }: Params) {
     path: `/api/v1/threads/${threadId}/failure-analysis`,
     method: "GET",
   });
-  if (proxied) {
+  // Forward proxy response only when backend knows this thread.
+  // On 404, fall through to local store (thread may exist only in local store).
+  if (proxied && proxied.status !== 404) {
     return proxied;
   }
 
@@ -36,7 +38,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     path: `/api/v1/threads/${threadId}/failure-analysis`,
     method: "PUT",
   });
-  if (proxied) {
+  if (proxied && proxied.status !== 404) {
     return proxied;
   }
 
@@ -55,7 +57,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     whatHappened: parsed.data.whatHappened,
     observations: parsed.data.observations,
     failedAssumptions: parsed.data.failedAssumptions,
-    rootCause: parsed.data.rootCause,
+    rootCause: parsed.data.rootCause ?? "",
   });
 
   if (!saved) {

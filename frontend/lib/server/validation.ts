@@ -3,7 +3,7 @@ import { z } from "zod";
 export const THREAD_STATUS_VALUES = ["active", "revision", "failed", "completed"] as const;
 
 const textList = z.array(z.string().trim().min(1).max(120)).max(20);
-
+// Custom Zod validator for rupee amounts in formats like "Rs 50,000" or "₹50,000"
 const rupeeText = z
   .string()
   .trim()
@@ -13,8 +13,14 @@ const rupeeText = z
     message: "Must be in format like 'Rs 50,000' or '₹50,000'",
   });
 
-export const createThreadSchema = z.object({
-  title: z.string().trim().min(1).max(150).optional(),
+export const createThreadSchema = z.object({ 
+  
+  //Schema for validating thread creation input, with optional title,
+//  parentThreadId, and status fields. The title must be a non-empty string up to 150 characters, parentThreadId must 
+// be a valid UUID if provided, and status must be one of the defined THREAD_STATUS_VALUES if provided.
+  
+
+title: z.string().trim().min(1).max(150).optional(),
   parentThreadId: z.string().uuid().optional(),
   status: z.enum(THREAD_STATUS_VALUES).optional(),
 });
@@ -45,10 +51,13 @@ export const simulationVariablesSchema = z.object({
 });
 
 export const failureAnalysisSchema = z.object({
-  whatHappened: z.string().trim().max(500),
+  whatHappened: z.string().trim().max(1000),
+  expectedOutcome: z.string().trim().max(500).optional().default(""),
+  whatDid: z.string().trim().max(500).optional().default(""),
+  biggestSurprise: z.string().trim().max(500).optional().default(""),
   observations: textList,
   failedAssumptions: textList,
-  rootCause: z.string().trim().max(300),
+  rootCause: z.string().trim().max(500).optional().default(""),
 });
 
 export function errorResponse(message: string, status: number) {

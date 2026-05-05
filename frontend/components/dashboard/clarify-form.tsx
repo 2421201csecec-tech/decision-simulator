@@ -25,9 +25,10 @@ interface ClarifyFormProps {
     constraints?: string[];
     assumptions?: string[];
   };
+  reentryContext?: { failedTitle: string; failedLessons: string[] } | null;
 }
 
-export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData }: ClarifyFormProps) {
+export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData, reentryContext }: ClarifyFormProps) {
   const [title, setTitle] = useState(initialData?.title || "");
   const [coreProblem, setCoreProblem] = useState(initialData?.coreProblem || "");
   const [desiredOutcome, setDesiredOutcome] = useState(initialData?.desiredOutcome || "");
@@ -174,6 +175,24 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
 
   return (
     <div className="h-full flex flex-col p-6 overflow-y-auto scroll-container">
+      {/* Re-entry banner — shown after failure analysis */}
+      {reentryContext && (
+        <div className="mb-4 rounded-xl border border-accent/30 bg-accent/5 px-4 py-3 space-y-1.5">
+          <p className="text-xs font-medium text-accent uppercase tracking-wider">Re-entering after failure</p>
+          <p className="text-sm text-foreground/80">Previous decision: <span className="font-medium">{reentryContext.failedTitle}</span></p>
+          {reentryContext.failedLessons.length > 0 && (
+            <ul className="space-y-1 pt-0.5">
+              {reentryContext.failedLessons.map((l, i) => (
+                <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
+                  <span className="text-accent/60 shrink-0">•</span>
+                  <span>{l}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">

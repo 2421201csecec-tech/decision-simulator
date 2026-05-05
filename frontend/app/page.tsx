@@ -11,10 +11,12 @@ import {
   createThread,
   fetchClarifyDraft,
   fetchGroupedThreads,
+  fetchSimulationState,
   saveClarifyDraft,
   type ClarifyDraft,
   type DraftInsights,
   type GroupedThreads,
+  type PressureTestState,
   type ThreadRecord,
 } from "@/lib/api/threads";
 
@@ -43,9 +45,12 @@ export default function Dashboard() {
     history: [],
   });
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [reentryContext, setReentryContext] = useState<{ failedTitle: string; failedLessons: string[] } | null>(null);
   const [uiError, setUiError] = useState<string | null>(null);
   const [clarifyInsights, setClarifyInsights] = useState<DraftInsights | null>(null);
   const [isAnalyzingDraft, setIsAnalyzingDraft] = useState(false);
+  const [pressureTestState, setPressureTestState] = useState<PressureTestState | null>(null);
+  const [extractionSchema, setExtractionSchema] = useState<Record<string, unknown> | null>(null);
   const autosaveResetTimerRef = useRef<number | null>(null);
   const lastAutosavedByThreadRef = useRef<Record<string, string>>({});
 
@@ -62,6 +67,16 @@ export default function Dashboard() {
   useEffect(() => {
     refreshGroupedThreads();
   }, [refreshGroupedThreads]);
+
+  // Reset and hydrate insight state on thread switch
+  useEffect(() => {
+    setPressureTestState(null);
+    setExtractionSchema(null);
+    if (!selectedThreadId) return;
+    fetchSimulationState(selectedThreadId).then(({ extractionSchema: schema }) => {
+      setExtractionSchema(schema);
+    }).catch(() => {});
+  }, [selectedThreadId]);
 
   useEffect(() => {
     return () => {
@@ -165,9 +180,9 @@ export default function Dashboard() {
     setIsAnalyzingDraft(false);
   }, []);
 
-  const handleSubmitFinal = () => {
+  const handleSubmitFinal = useCallback(() => {
     setView("decision-output");
-  };
+  }, []);
 
   const handleRunSimulation = () => {
     setView("simulation");
@@ -185,10 +200,10 @@ export default function Dashboard() {
     setView("failure-analysis");
   };
 
-  const handleRebuildDecision = () => {
-    // Start a new decision with insights from the diagnosis
+  const handleRebuildDecision = (context?: { failedTitle: string; failedLessons: string[] }) => {
     setView("clarify");
     setSelectedFailedDecision(null);
+    setReentryContext(context || null);
   };
 
   const handleLogoClick = () => {
@@ -197,6 +212,7 @@ export default function Dashboard() {
     setSelectedFailedDecision(null);
     setAutosaveStatus("idle");
     setUiError(null);
+    setReentryContext(null);
   };
 
   const handleSelectThread = async (thread: ThreadRecord) => {
@@ -268,6 +284,8 @@ export default function Dashboard() {
             onRebuildDecision={handleRebuildDecision}
             decisionData={decisionData}
             selectedFailedDecision={selectedFailedDecision}
+            onPressureStateChange={setPressureTestState}
+            reentryContext={reentryContext}
           />
 
           {/* Right Panel - AI Insights */}
@@ -286,6 +304,9 @@ export default function Dashboard() {
               onStartRevision={handleStartRevision}
               clarifyInsights={clarifyInsights}
               isAnalyzingDraft={isAnalyzingDraft}
+              pressureTestState={pressureTestState}
+              extractionSchema={extractionSchema}
+              clarifyDraft={decisionData}
             />
           </div>
         </div>

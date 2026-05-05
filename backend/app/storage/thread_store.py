@@ -27,6 +27,8 @@ from app.storage.thread_repository import (
     get_decision_output_data as _get_decision_output_data,
     get_failure_analysis as _get_failure_analysis,
     save_failure_analysis as _save_failure_analysis,
+    get_pattern_profile as _get_pattern_profile,
+    get_weak_spots as _get_weak_spots,
     get_thread_export_data as _get_thread_export_data,
     get_all_threads_export_data as _get_all_threads_export_data,
 )
@@ -100,6 +102,14 @@ async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
 
 async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
     return await _save_failure_analysis(thread_id, payload)
+
+
+async def get_pattern_profile(user_id: str) -> dict[str, Any]:
+    return await _get_pattern_profile(user_id)
+
+
+async def get_weak_spots(user_id: str) -> list[dict]:
+    return await _get_weak_spots(user_id)
 
 
 async def get_thread_export_data(thread_id: str) -> dict[str, Any] | None:

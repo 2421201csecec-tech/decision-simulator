@@ -53,12 +53,14 @@ interface CenterPanelProps {
   onSubmitFinal: () => void;
   onRunSimulation?: () => void;
   onStartRevision?: () => void;
-  onRebuildDecision?: () => void;
+  onRebuildDecision?: (context?: { failedTitle: string; failedLessons: string[] }) => void;
   decisionData?: any;
   selectedFailedDecision?: string | null;
+  onPressureStateChange?: (state: any) => void;
+  reentryContext?: { failedTitle: string; failedLessons: string[] } | null;
 }
 
-export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision }: CenterPanelProps) {
+export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext }: CenterPanelProps) {
   if (view === "clarify") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
@@ -70,6 +72,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           onDraftChange={onDraftChange}
           autosaveStatus={autosaveStatus}
           initialData={decisionData}
+          reentryContext={reentryContext}
         />
       </main>
     );
@@ -78,7 +81,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
   if (view === "pressure-test") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
-        <PressureTest threadId={selectedThreadId} onBack={onBack} onSubmitFinal={onSubmitFinal} />
+        <PressureTest threadId={selectedThreadId} onBack={onBack} onSubmitFinal={onSubmitFinal} onStateChange={onPressureStateChange} />
       </main>
     );
   }
@@ -111,7 +114,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           threadId={selectedThreadId}
           failedDecision={selectedFailedDecision || "Unknown Decision"}
           onBack={onBack}
-          onRebuild={onRebuildDecision || (() => {})}
+          onRebuild={onRebuildDecision || ((_ctx) => {})}
         />
       </main>
     );

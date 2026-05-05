@@ -111,7 +111,22 @@ export function LeftPanel({
               <ul className="space-y-1">
                 {section.items.map((item, itemIndex) => (
                   <li key={itemIndex}>
-                    {section.title === "Decision History" ? (
+                    {section.title === "Failure Analysis" ? (
+                      <button
+                        onClick={() => {
+                          const thread = sectionByTitle[section.title]?.[itemIndex];
+                          if (thread) onFailureAnalysis?.(thread);
+                        }}
+                        className={cn(
+                          "w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors",
+                          item.active
+                            ? "text-foreground font-medium bg-secondary/30"
+                            : "text-foreground/80 hover:bg-secondary/50"
+                        )}
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -127,7 +142,14 @@ export function LeftPanel({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-48">
-                          <DropdownMenuItem>Decision Card</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const thread = sectionByTitle[section.title]?.[itemIndex];
+                              if (thread) onSelectThread?.(thread);
+                            }}
+                          >
+                            Open
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               const thread = sectionByTitle[section.title]?.[itemIndex];
@@ -136,36 +158,8 @@ export function LeftPanel({
                           >
                             Failure Analysis
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Revision</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          const thread = sectionByTitle[section.title]?.[itemIndex];
-                          if (!thread) return;
-
-                          if (section.title === "Failure Analysis") {
-                            onFailureAnalysis?.(thread);
-                            return;
-                          }
-
-                          onSelectThread?.(thread);
-                        }}
-                        className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors",
-                          item.active
-                            ? "text-foreground font-medium bg-secondary/30"
-                            : "text-foreground/80 hover:bg-secondary/50"
-                        )}
-                      >
-                        <span>{item.label}</span>
-                        {item.subtitle && (
-                          <span className="block text-xs text-muted-foreground pl-2">
-                            {item.subtitle}
-                          </span>
-                        )}
-                      </button>
                     )}
                   </li>
                 ))}
