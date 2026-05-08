@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -101,3 +102,5 @@ class ExtractionMemory(Base):
     overall_confidence = Column(Float, nullable=False)
     schema_json = Column(JSON, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    embedding = Column(Vector(384), nullable=True)
+    consistency_score = Column(Float, nullable=True)

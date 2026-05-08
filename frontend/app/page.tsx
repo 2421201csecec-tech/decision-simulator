@@ -13,6 +13,7 @@ import {
   fetchGroupedThreads,
   fetchSimulationState,
   saveClarifyDraft,
+  triggerExtraction,
   type ClarifyDraft,
   type DraftInsights,
   type GroupedThreads,
@@ -131,6 +132,12 @@ export default function Dashboard() {
         setAutosaveStatus("error");
         setUiError(error instanceof Error ? error.message : "Failed to save clarify draft.");
       }
+
+      // Fire extraction in background — does not block navigation
+      const threadId = selectedThreadId;
+      triggerExtraction(threadId).then((schema) => {
+        if (schema) setExtractionSchema(schema);
+      });
     }
 
     if (view === "clarify") {

@@ -537,6 +537,20 @@ async def get_extraction_schema(thread_id: str) -> dict[str, Any] | None:
         return row[0]
 
 
+async def save_extraction_schema(thread_id: str, schema: dict) -> bool:
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id)
+        )
+        decision = result.scalar_one_or_none()
+        if decision is None:
+            return False
+        decision.extraction_schema = schema
+        decision.updated_at = _now()
+        await session.commit()
+        return True
+
+
 async def _advance_pressure_scenario(
     thread_id: str,
     scenario_id: int,

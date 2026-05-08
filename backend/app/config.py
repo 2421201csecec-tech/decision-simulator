@@ -27,5 +27,11 @@ class Settings:
     enrichment_enabled: bool = os.getenv("ENRICHMENT_ENABLED", "true").lower() == "true"
     memory_write_enabled: bool = os.getenv("MEMORY_WRITE_ENABLED", "true").lower() == "true"
 
+    # Memory retrieval (OpenAI embeddings)
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    embedding_model: str = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    memory_retrieval_enabled: bool = os.getenv("MEMORY_RETRIEVAL_ENABLED", "true").lower() == "true"
+    memory_min_cosine: float = float(os.getenv("MEMORY_MIN_COSINE", "0.72"))
+
 
 settings = Settings()

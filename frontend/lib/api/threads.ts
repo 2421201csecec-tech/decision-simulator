@@ -421,3 +421,18 @@ export async function analyzeDraft(data: {
     return null;
   }
 }
+
+export async function triggerExtraction(
+  threadId: string
+): Promise<Record<string, unknown> | null> {
+  try {
+    const response = await fetch(`/api/threads/${threadId}/extract`, {
+      method: "POST",
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.extractionSchema ?? null;
+  } catch {
+    return null;
+  }
+}

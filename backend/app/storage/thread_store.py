@@ -24,6 +24,7 @@ from app.storage.thread_repository import (
     get_latest_simulation as _get_latest_simulation,
     get_simulation_history as _get_simulation_history,
     get_extraction_schema as _get_extraction_schema,
+    save_extraction_schema as _save_extraction_schema,
     get_decision_output_data as _get_decision_output_data,
     get_failure_analysis as _get_failure_analysis,
     save_failure_analysis as _save_failure_analysis,
@@ -86,6 +87,10 @@ async def get_latest_simulation(thread_id: str) -> dict[str, Any] | None:
 
 async def get_extraction_schema(thread_id: str) -> dict[str, Any] | None:
     return await _get_extraction_schema(thread_id)
+
+
+async def save_extraction_schema(thread_id: str, schema: dict) -> bool:
+    return await _save_extraction_schema(thread_id, schema)
 
 
 async def get_simulation_history(thread_id: str) -> list[dict[str, Any]] | None:

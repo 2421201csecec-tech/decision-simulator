@@ -9,6 +9,7 @@ from uuid import uuid4
 from app.config import settings
 from app.extraction.consistency.checker import run_checks
 from app.extraction.enrichment.enricher import Enricher
+from app.extraction.memory.retriever import retrieve_similar
 from app.extraction.memory.writer import should_store, write_extraction_to_memory
 from app.extraction.passes.pass1_intent import run_pass1, PassParseError
 from app.extraction.passes.pass2_variables import run_pass2
@@ -186,6 +187,27 @@ class _PersistentFailure(Exception):
         self.hard_errors = hard_errors
 
 
+def _format_memory_context(schemas: list[dict]) -> str:
+    if not schemas:
+        return "No prior context available."
+    rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    lines = ["SIMILAR PAST DECISIONS (use for variable naming calibration only — do not copy):"]
+    for i, s in enumerate(schemas, 1):
+        top_vars = sorted(
+            s.get("variables") or [],
+            key=lambda v: rank.get(v.get("importance", "low"), 3),
+        )[:4]
+        top_risks = (s.get("risks") or [])[:2]
+        lines.append(
+            f"\n[{i}] Category: {s.get('decision_category')} | "
+            f"Confidence: {s.get('confidence', {}).get('overall_confidence', 0):.2f}\n"
+            f"Decision: {s.get('decision', '')}\n"
+            f"Variables: {', '.join(v['name'] for v in top_vars if v.get('name'))}\n"
+            f"Risks: {'; '.join(r['text'][:60] for r in top_risks if r.get('text'))}"
+        )
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -221,9 +243,14 @@ async def run_extraction(
     try:
         # Pass 1
         if resume_from_pass is None or resume_from_pass == 1:
+            # Retrieve similar past decisions for few-shot context (category unknown pre-Pass 1)
+            retrieved = await retrieve_similar(query_text=user_input, category_hint=None)
+            memory_context = _format_memory_context(retrieved)
+            if retrieved:
+                logger.debug("retrieved %d similar schemas for memory context", len(retrieved))
             await _run_pass_with_retry(
                 1, run_pass1, validator, schema,
-                user_input,  # positional args for run_pass1
+                user_input, memory_context,  # positional args for run_pass1
             )
 
         # Pass 2

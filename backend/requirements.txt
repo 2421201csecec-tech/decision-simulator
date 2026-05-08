@@ -9,3 +9,5 @@ alembic==1.14.1
 groq>=0.11.0
 networkx>=3.4.2
 numpy>=1.26.0
+fastembed
+pgvector
