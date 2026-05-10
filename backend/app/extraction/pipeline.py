@@ -216,6 +216,9 @@ async def run_extraction(
     user_input: str,
     session_id: str | None = None,
     clarification_answer: str | None = None,
+    user_id: str = "default_user",
+    decision_id: str | None = None,
+    category_hint: str | None = None,
 ) -> dict:
     """Run the full extraction pipeline.
 
@@ -224,10 +227,19 @@ async def run_extraction(
     and CLARIFICATION_ENABLED=true.
     Raises ExtractionError on unrecoverable failure with clarification disabled.
     """
+    from app.pattern_engine.capabilities import get_capabilities
+    from app.pattern_engine.enrichment_layer import apply_pattern_enrichment
+    from app.pattern_engine.importance_boost import apply_pattern_importance_boost
+    from app.pattern_engine.injection_logger import log_injection
+    from app.pattern_engine.pass3_injector import build_pass3_injection_block
+
     validator = SchemaValidator()
     enricher = Enricher()
     schema: dict[str, Any] = {}
     resume_from_pass: int | None = None
+
+    # Load pattern capabilities (always — flags govern whether they actually fire)
+    caps = await get_capabilities(user_id, category_hint or "")
 
     # Resume from saved session if provided
     if session_id and session_id in _sessions:
@@ -257,13 +269,32 @@ async def run_extraction(
         if resume_from_pass is None or resume_from_pass <= 2:
             await _run_pass_with_retry(
                 2, run_pass2, validator, schema,
-                user_input, dict(schema),  # positional args for run_pass2
+                user_input, dict(schema),
             )
+            # Hook A — Post-Pass-2: importance boost (no-op when flag is off)
+            if caps["use_pattern_injection"]:
+                schema["variables"] = apply_pattern_importance_boost(
+                    schema.get("variables") or [],
+                    caps["active_patterns"],
+                    caps["blend_weight"],
+                )
+
+        # Re-scope capabilities now that Pass 1 has resolved decision_category
+        resolved_category = schema.get("decision_category") or category_hint or ""
+        if resolved_category != (category_hint or ""):
+            caps = await get_capabilities(user_id, resolved_category)
+
+        # Hook B — Pre-Pass-3: build pattern injection block (empty string when flag off)
+        pattern_block = ""
+        if caps["use_pattern_injection"]:
+            pattern_block = build_pass3_injection_block(caps["active_patterns"])
+            if pattern_block:
+                logger.info("pass3_injection user=%s patterns=%d block_chars=%d", user_id, len(caps["active_patterns"]), len(pattern_block))
 
         # Pass 3
         await _run_pass_with_retry(
             3, run_pass3, validator, schema,
-            user_input, dict(schema),  # positional args for run_pass3
+            user_input, dict(schema), pattern_block,
         )
 
     except _PersistentFailure as exc:
@@ -284,7 +315,11 @@ async def run_extraction(
             f"Extraction failed after retries: {exc.hard_errors}"
         ) from exc
 
-    # Enrich (non-blocking — failure returns original schema)
+    # Hook C — Pre-Enrichment: pattern enrichment layer (no-op when flag off)
+    if caps["use_pattern_injection"]:
+        schema = await apply_pattern_enrichment(schema, caps["active_patterns"])
+
+    # Standard enrichment (non-blocking — failure returns original schema)
     enrichment_ran = False
     if settings.enrichment_enabled:
         schema, _ = await enricher.enrich(schema, user_input)
@@ -316,6 +351,17 @@ async def run_extraction(
     # Fire-and-forget memory write — never blocks the response
     if should_store(result):
         asyncio.create_task(write_extraction_to_memory(result))
+
+    # Fire-and-forget injection log — always written (even in shadow mode)
+    if decision_id:
+        asyncio.create_task(log_injection(
+            decision_id=decision_id,
+            user_id=user_id,
+            caps=caps,
+            lambda_adjusted=None,
+            pass3_injected=bool(pattern_block),
+            enrichment_gaps_added=len(result.get("pattern_flags") or []),
+        ))
 
     return result
 

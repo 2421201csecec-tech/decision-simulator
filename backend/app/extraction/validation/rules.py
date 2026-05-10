@@ -327,8 +327,56 @@ HARD_RULES: dict[str, callable] = {
     "V018": V018_no_contradictory_hard_constraints,
 }
 
+def S_PAT_001_pattern_id_ref_type(schema: dict) -> RuleResult:
+    """SOFT — pattern_id_ref on assumptions/variables must be string or null if present."""
+    for var in schema.get("variables", []):
+        ref = var.get("pattern_id_ref")
+        if ref is not None and not isinstance(ref, str):
+            var["pattern_id_ref"] = str(ref)
+            return RuleResult(
+                passed=False, rule_id="S_PAT_001",
+                message="pattern_id_ref coerced to string",
+                re_run_pass=0, field_path="variables[].pattern_id_ref",
+                repaired_schema=schema,
+                fix_description="pattern_id_ref cast to str",
+            )
+    return RuleResult(passed=True, rule_id="S_PAT_001")
+
+
+def S_PAT_002_pattern_flags_shape(schema: dict) -> RuleResult:
+    """SOFT — pattern_flags must be list of {pattern_id: str, confidence: float} if present."""
+    flags = schema.get("pattern_flags")
+    if flags is None:
+        return RuleResult(passed=True, rule_id="S_PAT_002")
+    if not isinstance(flags, list):
+        schema["pattern_flags"] = []
+        return RuleResult(
+            passed=False, rule_id="S_PAT_002",
+            message="pattern_flags was not a list — reset to []",
+            re_run_pass=0, field_path="pattern_flags",
+            repaired_schema=schema,
+            fix_description="pattern_flags reset to []",
+        )
+    cleaned = []
+    for f in flags:
+        if isinstance(f, dict) and isinstance(f.get("pattern_id"), str) and isinstance(f.get("confidence"), (int, float)):
+            cleaned.append(f)
+    if len(cleaned) != len(flags):
+        schema["pattern_flags"] = cleaned
+        return RuleResult(
+            passed=False, rule_id="S_PAT_002",
+            message=f"Removed {len(flags) - len(cleaned)} malformed pattern_flags entries",
+            re_run_pass=0, field_path="pattern_flags",
+            repaired_schema=schema,
+            fix_description="Removed entries missing pattern_id (str) or confidence (float)",
+        )
+    return RuleResult(passed=True, rule_id="S_PAT_002")
+
+
 SOFT_RULES: dict[str, callable] = {
     "V009": V009_broken_affects_edge_soft,
     "V011": V011_default_value_in_domain,
     "V014": V014_low_confidence_needs_enrichment,
+    "S_PAT_001": S_PAT_001_pattern_id_ref_type,
+    "S_PAT_002": S_PAT_002_pattern_flags_shape,
 }

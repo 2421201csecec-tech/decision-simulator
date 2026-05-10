@@ -13,6 +13,11 @@ logger = logging.getLogger("pressure_test.evaluator")
 _PROMPT_DIR = Path(__file__).parent
 
 
+
+# This module implements the logic for evaluating pressure test answers, which includes:
+# - Defining the EvaluationResult dataclass to structure the evaluation output.
+# - Implementing the evaluate_answer function that takes a question, an answer, and a failure vector, and returns an EvaluationResult.
+# - The evaluate_answer function constructs a prompt using a template
 def _fill_template(template: str, **kwargs: str) -> str:
     result = template
     for key, value in kwargs.items():
@@ -20,6 +25,11 @@ def _fill_template(template: str, **kwargs: str) -> str:
     return result
 
 
+
+
+# The evaluate_answer function calls a language model (LLM) with the constructed prompt and processes the
+# response to determine the quality of the answer, any missing information, the next probe type, and any commitments made. It also includes error h
+#andling to ensure that if the LLM call fails, a fallback evaluation result is returned.
 def _clean_fences(raw: str) -> str:
     raw = raw.strip()
     if raw.startswith("```"):
@@ -33,7 +43,11 @@ def _clean_fences(raw: str) -> str:
 _VALID_QUALITIES = {"strong", "adequate", "weak", "vague"}
 _VALID_PROBE_TYPES = {"realism", "fallback", "threshold"}
 
-
+# The EvaluationResult dataclass defines the structure of the evaluation output,
+# including the quality of the answer, any missing information, the next probe type, 
+#and any commitments made. The evaluate_answer function uses a prompt template to query an LLM and processes 
+#the response to populate an EvaluationResult instance. If the LLM call fails for any reason, a fallback EvaluationResult 
+#is returned to ensure that the system can continue functioning.
 @dataclass
 class EvaluationResult:
     quality: str = "adequate"

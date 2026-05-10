@@ -14,18 +14,26 @@ L3 = 0.10   # CVaR tail penalty (pattern engine adjustable, max +50%)
 L4 = 0.20   # upside bonus (pattern engine adjustable, max -40%)
 
 
-def aggregate(utilities: np.ndarray) -> dict:
+def aggregate(utilities: np.ndarray, lambdas: dict | None = None) -> dict:
+    lam = lambdas or {"lambda1": L1, "lambda2": L2, "lambda3": L3, "lambda4": L4}
+
     mean_u = float(np.mean(utilities))
     std_u = float(np.std(utilities))
     downside = float(np.mean(utilities < 0))
 
-# CVaR (Conditional Value at Risk) at 5% level
+    # CVaR (Conditional Value at Risk) at 5% level
     p5 = np.percentile(utilities, 5)
     tail = utilities[utilities <= p5]
     cvar = float(np.mean(tail)) if len(tail) > 0 else float(p5)
 
     upside = float(np.mean(utilities > 0.5))
-    score = mean_u - L1 * std_u - L2 * downside - L3 * abs(cvar) + L4 * upside
+    score = (
+        mean_u
+        - lam["lambda1"] * std_u
+        - lam["lambda2"] * downside
+        - lam["lambda3"] * abs(cvar)
+        + lam["lambda4"] * upside
+    )
 
     p80 = np.percentile(utilities, 80)
     p20 = np.percentile(utilities, 20)
@@ -52,6 +60,7 @@ def aggregate(utilities: np.ndarray) -> dict:
 def build_results(
     action_map: dict[str, np.ndarray],
     actions: list[dict],
+    lambdas: dict | None = None,
 ) -> tuple[list[dict], float]:
     label_map = {
         (a.get("action_id") or a.get("id") or ""): a.get("label", "")
@@ -59,7 +68,7 @@ def build_results(
     }
     scored = []
     for action_id, utilities in action_map.items():
-        metrics = aggregate(utilities)
+        metrics = aggregate(utilities, lambdas)
         metrics["id"] = action_id
         metrics["label"] = label_map.get(action_id, action_id)
         scored.append(metrics)

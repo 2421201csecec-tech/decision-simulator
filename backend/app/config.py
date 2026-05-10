@@ -33,5 +33,8 @@ class Settings:
     memory_retrieval_enabled: bool = os.getenv("MEMORY_RETRIEVAL_ENABLED", "true").lower() == "true"
     memory_min_cosine: float = float(os.getenv("MEMORY_MIN_COSINE", "0.72"))
 
+    # Pattern Engine v2 — master kill switch (overrides all ENABLE_* flags in constants.py)
+    pattern_engine_enabled: bool = os.getenv("PATTERN_ENGINE_ENABLED", "false").lower() == "true"
+
 
 settings = Settings()

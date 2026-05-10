@@ -19,6 +19,13 @@ def _fill_template(template: str, **kwargs: str) -> str:
         result = result.replace("{" + key + "}", value)
     return result
 
+#this function generates a human-readable explanation for the results of a simulation,
+# using a language model (LLM) to analyze the simulation output and produce insights. 
+#It takes in the simulation schema, the options with their metrics, the confidence level, 
+#the key variable identified by sensitivity analysis, any user-provided values, and the thread context 
+#from previous interactions. The function constructs a prompt based on a template and calls the LLM to generate an explanation, 
+#which includes a verdict, key assumptions, and per-case bullet points. The output is structured as a dictionary and includes error 
+#handling to ensure that if the LLM call fails or returns incomplete data, the function can still return a meaningful response.
 
 def _clean_fences(raw: str) -> str:
     raw = raw.strip()

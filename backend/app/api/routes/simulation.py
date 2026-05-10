@@ -15,6 +15,8 @@ router = APIRouter()
 class SimulateRequest(BaseModel):
     extraction_schema: dict
     user_values: dict[str, float] = {}
+    user_id: str = "default_user"
+    thread_id: str | None = None
 
 
 class ScoreRequest(BaseModel):
@@ -27,21 +29,50 @@ class ScoreRequest(BaseModel):
 @router.post("/simulate")
 async def post_simulate(req: SimulateRequest) -> JSONResponse:
     """Monte Carlo simulation. Returns distributions + sensitivity analysis. No LLM call."""
+    from app.pattern_engine.capabilities import get_capabilities
+    from app.pattern_engine.lambda_adjuster import compute_adjusted_lambdas
+
     action_map = run_monte_carlo(req.extraction_schema, req.user_values)
     if not action_map:
         return JSONResponse({"message": "Insufficient schema to simulate"}, status_code=422)
 
+    category = req.extraction_schema.get("decision_category") or ""
+    caps = await get_capabilities(req.user_id, category)
+
+    lambda_base = {"lambda1": 0.30, "lambda2": 0.40, "lambda3": 0.10, "lambda4": 0.20}
+    lambda_adjusted = None
+    pattern_note = None
+
+    if caps["use_failure_biasing"]:
+        lambda_adjusted = compute_adjusted_lambdas(
+            caps["active_patterns"], caps["blend_weight"], category
+        )
+        if lambda_adjusted != lambda_base:
+            pattern_note = (
+                "Score adjusted based on your past failure patterns. "
+                f"Risk weights: L1={lambda_adjusted['lambda1']:.2f}, "
+                f"L2={lambda_adjusted['lambda2']:.2f}."
+            )
+
     actions = req.extraction_schema.get("actions") or []
-    options, confidence = build_results(action_map, actions)
+    options, confidence = build_results(action_map, actions, lambdas=lambda_adjusted)
+    base_options, _ = build_results(action_map, actions, lambdas=None)
 
     baseline_scores = {opt["id"]: opt["score"] for opt in options}
     key_variable_id = run_sensitivity(req.extraction_schema, req.user_values, baseline_scores)
 
+    winner = options[0] if options else None
+    base_winner = base_options[0] if base_options else None
+
     return JSONResponse({
         "options": options,
         "confidence": confidence,
-        "winner_id": options[0]["id"] if options else None,
+        "winner_id": winner["id"] if winner else None,
         "key_variable_id": key_variable_id,
+        "base_score": round(base_winner["score"], 4) if base_winner else None,
+        "adjusted_score": round(winner["score"], 4) if winner and lambda_adjusted else None,
+        "lambda_adjusted": lambda_adjusted,
+        "pattern_note": pattern_note,
     })
 
 

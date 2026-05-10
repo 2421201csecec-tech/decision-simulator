@@ -68,6 +68,8 @@ async def analyze_gaps(snapshot: dict, intake: dict) -> dict | None:
 
     # Hallucination firewall — drop gaps whose text isn't in snapshot assumptions.
     # When there are no assumptions, accept empty list (LLM should return []).
+    
+    
     if assumptions:
         assumption_set = {a.strip().lower() for a in assumptions}
         filtered_gaps = [

@@ -10,7 +10,10 @@ from app.models.decision import ExtractionMemory
 
 logger = logging.getLogger("extraction.memory.writer")
 
-
+# Heuristic rules to decide whether an extraction is "good enough" to store in memory
+# for future retrieval. This is important to avoid cluttering the memory with low-quality
+# or irrelevant extractions, which could degrade retrieval performance and increase storage
+# costs.
 def should_store(schema: dict) -> bool:
     c = schema.get("confidence", {})
     v = schema.get("validation", {})

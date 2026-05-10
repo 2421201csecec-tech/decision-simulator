@@ -1247,27 +1247,38 @@ async def _get_pattern_list(user_id: str, session: Any) -> list[dict]:
 
 async def _write_lessons_to_pattern_profile(user_id: str, lessons: list[dict], decision_id: str) -> None:
     try:
+        from app.pattern_engine.confidence import compute_confidence, recency_days_from
+        from app.pattern_engine.dedup import run_dedup
+
         async with get_async_session() as session:
+            # SELECT FOR UPDATE — prevents concurrent lost updates (R5 safety)
             result = await session.execute(
-                select(PatternProfile).where(PatternProfile.user_id == user_id)
+                select(PatternProfile)
+                .where(PatternProfile.user_id == user_id)
+                .with_for_update()
             )
             profile = result.scalar_one_or_none()
             now = _now()
+            now_iso = now.isoformat()
 
             if profile is None:
-                patterns: list[dict] = []
                 profile = PatternProfile(
                     user_id=user_id,
-                    patterns=patterns,
+                    patterns=[],
+                    themes=[],
+                    blend_weight=0.0,
+                    n_decisions=0,
+                    n_outcomes=1,  # failure analysis = one outcome observed
                     updated_at=now,
                     created_at=now,
                     version=1,
                 )
                 session.add(profile)
             else:
-                patterns = list(profile.patterns or [])
+                profile.n_outcomes = (profile.n_outcomes or 0) + 1
 
-            now_iso = now.isoformat()
+            # --- Legacy flat patterns[] write (backward compat) ---
+            patterns: list[dict] = list(profile.patterns or [])
             for lesson in lessons:
                 ptype = lesson.get("pattern_type", "")
                 existing = next((p for p in patterns if p.get("pattern_type") == ptype), None)
@@ -1288,8 +1299,55 @@ async def _write_lessons_to_pattern_profile(user_id: str, lessons: list[dict], d
                         "first_seen": now_iso,
                         "last_seen": now_iso,
                     })
-
             profile.patterns = patterns
+
+            # --- New themes[] write with dedup + confidence ---
+            themes: list[dict] = list(profile.themes or [])
+            for lesson in lessons:
+                new_theme = {
+                    "pattern_id": lesson.get("pattern_id") or str(__import__("uuid").uuid4()),
+                    "pattern_type": lesson.get("pattern_type", ""),
+                    "statement": lesson.get("statement", ""),
+                    "failure_mode": lesson.get("failure_type") or lesson.get("pattern_type", ""),
+                    "decision_category": lesson.get("decision_category"),
+                    "seen_in": [decision_id],
+                    "count": 1,
+                    "first_seen": now_iso,
+                    "last_seen": now_iso,
+                    "confidence": compute_confidence(
+                        recency_days=0,
+                        consistency=None,
+                        outcome_confirmation=None,
+                        count=1,
+                    ),
+                    "consistency": None,
+                    "outcome_confirmation": None,
+                    "embedding": None,  # backfilled lazily in Phase 7 enrichment
+                }
+                themes = run_dedup(themes, new_theme, decision_id)
+
+            # Lazy embedding backfill: embed themes that lack embeddings (if model available)
+            try:
+                from app.extraction.memory.embedder import _model
+                from app.pattern_engine.confidence import compute_confidence as _cc, recency_days_from as _rd
+                if _model is not None:
+                    for theme in themes:
+                        if not theme.get("embedding"):
+                            text = f"{theme.get('pattern_type', '')} {theme.get('statement', '')}"
+                            vec = next(iter(_model.embed([text.strip()])), None)
+                            if vec is not None:
+                                theme["embedding"] = vec.tolist()
+                                # Recompute confidence now that we have embedding
+                                theme["confidence"] = _cc(
+                                    recency_days=_rd(theme.get("last_seen")),
+                                    consistency=theme.get("consistency"),
+                                    outcome_confirmation=theme.get("outcome_confirmation"),
+                                    count=int(theme.get("count", 1)),
+                                )
+            except Exception:
+                logger.debug("lazy embedding backfill failed — will retry next write", exc_info=False)
+
+            profile.themes = themes
             profile.updated_at = now
             await session.commit()
     except Exception:

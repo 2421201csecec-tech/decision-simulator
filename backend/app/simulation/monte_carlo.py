@@ -3,8 +3,11 @@ from __future__ import annotations
 import numpy as np
 
 N_SIMS = 10_000
-N_SENSITIVITY = 1_000
-IMPORTANCE_WEIGHTS = {"critical": 0.40, "high": 0.25, "medium": 0.20, "low": 0.15}
+N_SENSITIVITY = 1_000 # Reduced sims for sensitivity to keep latency low. Results are noisy but directionally correct.
+
+
+IMPORTANCE_WEIGHTS = {"critical": 0.40, "high": 0.25, "medium": 0.20, "low": 0.15} 
+# Variable importance weights for scoring. Must sum to 1.0 or less.
 
 
 def _variable_distribution(

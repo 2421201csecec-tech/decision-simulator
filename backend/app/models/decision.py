@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import ARRAY, Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -24,6 +24,10 @@ class Decision(Base):
     pressure_test = Column(JSON, nullable=True)
     extraction_schema = Column(JSON, nullable=True)
     decision_output = Column(JSON, nullable=True)
+    # Pattern Engine v2 scoring columns
+    base_score = Column(Float, nullable=True)
+    adjusted_score = Column(Float, nullable=True)
+    experiment_group = Column(String, nullable=True)  # 'control' | 'treatment'
 
     simulation_runs = relationship(
         "SimulationRun",
@@ -88,10 +92,63 @@ class PatternProfile(Base):
     __tablename__ = "pattern_profiles"
 
     user_id = Column(String, primary_key=True)
-    patterns = Column(JSON, nullable=False, default=list)
+    patterns = Column(JSON, nullable=False, default=list)  # legacy flat array — preserved
+    themes = Column(JSON, nullable=True)                   # new nested shape (themes[])
+    blend_weight = Column(Float, nullable=False, default=0.0)
+    n_decisions = Column(Integer, nullable=False, default=0)
+    n_outcomes = Column(Integer, nullable=False, default=0)
     updated_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=True)
     version = Column(Integer, nullable=False, default=1)
+
+
+class AggregatePattern(Base):
+    __tablename__ = "aggregate_patterns"
+
+    id = Column(String, primary_key=True)
+    pattern_type = Column(String, nullable=False)
+    decision_category = Column(String, nullable=False, index=True)
+    failure_mode = Column(String, nullable=False)
+    hold_rate = Column(Float, nullable=False, default=0.5)
+    n_samples = Column(Integer, nullable=False, default=0)
+    n_contributors = Column(Integer, nullable=False, default=0)
+    severity_distribution = Column(JSON, nullable=True)
+    cohort_breakdown = Column(JSON, nullable=True)
+    confidence_floor = Column(Float, nullable=False, default=0.0)
+    embedding = Column(Vector(384), nullable=True)
+    last_updated = Column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("pattern_type", "decision_category", "failure_mode", name="uq_aggregate_pattern"),
+    )
+
+
+class PatternInjectionLog(Base):
+    __tablename__ = "pattern_injection_log"
+
+    log_id = Column(String, primary_key=True)
+    decision_id = Column(String, ForeignKey("decisions.decision_id"), nullable=False, index=True)
+    user_id = Column(String, nullable=False, index=True)
+    blend_weight = Column(Float, nullable=False)
+    patterns_considered = Column(JSON, nullable=True)   # list[str] UUIDs
+    patterns_injected = Column(JSON, nullable=True)     # list[str] UUIDs
+    patterns_rejected = Column(JSON, nullable=True)
+    lambda_base = Column(JSON, nullable=False)
+    lambda_adjusted = Column(JSON, nullable=True)
+    experiment_group = Column(String, nullable=True)    # 'control' | 'treatment'
+    pass3_injected = Column(Boolean, nullable=False, default=False)
+    enrichment_gaps_added = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), nullable=True, index=True)
+
+
+class PatternContributionLog(Base):
+    __tablename__ = "pattern_contribution_log"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, nullable=False, index=True)
+    pattern_type = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    contributed_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class ExtractionMemory(Base):
