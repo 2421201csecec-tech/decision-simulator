@@ -29,7 +29,11 @@ interface ClarifyFormProps {
 }
 
 export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData, reentryContext }: ClarifyFormProps) {
-  const [title, setTitle] = useState(initialData?.title || "");
+  const [title, setTitle] = useState(
+    initialData?.title && initialData.title !== "Untitled Decision" && initialData.title !== "Untitled n"
+      ? initialData.title
+      : ""
+  );
   const [coreProblem, setCoreProblem] = useState(initialData?.coreProblem || "");
   const [desiredOutcome, setDesiredOutcome] = useState(initialData?.desiredOutcome || "");
   const [context, setContext] = useState(initialData?.context || "");

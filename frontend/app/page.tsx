@@ -11,6 +11,7 @@ import {
   createThread,
   fetchClarifyDraft,
   fetchGroupedThreads,
+  fetchPressureTest,
   fetchSimulationState,
   saveClarifyDraft,
   triggerExtraction,
@@ -76,6 +77,9 @@ export default function Dashboard() {
     if (!selectedThreadId) return;
     fetchSimulationState(selectedThreadId).then(({ extractionSchema: schema }) => {
       setExtractionSchema(schema);
+    }).catch(() => {});
+    fetchPressureTest(selectedThreadId).then((state) => {
+      if (state) setPressureTestState(state);
     }).catch(() => {});
   }, [selectedThreadId]);
 

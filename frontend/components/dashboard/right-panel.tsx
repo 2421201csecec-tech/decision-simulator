@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import { ChevronRight, ChevronLeft, MoreHorizontal } from "lucide-react";
+import { ChevronRight, ChevronLeft, MoreHorizontal, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -147,6 +147,179 @@ function InsightBlock({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Decision Output right panel components
+// ---------------------------------------------------------------------------
+
+function confidenceLevel(pct: number): { label: string; subLabel: string; color: string } {
+  if (pct >= 80) return { label: "Strong signal", subLabel: "Context clear", color: "#4ade80" };
+  if (pct >= 60) return { label: "Good signal", subLabel: "Context well-understood", color: "var(--accent)" };
+  if (pct >= 40) return { label: "Moderate signal", subLabel: "Some gaps remain", color: "#fbbf24" };
+  return { label: "Weak signal", subLabel: "Context unclear", color: "#f87171" };
+}
+
+function ConfidenceGauge({ value }: { value: number }) {
+  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  const r = 28;
+  const circ = 2 * Math.PI * r;
+  const dash = (pct / 100) * circ;
+  const { label, subLabel, color } = confidenceLevel(pct);
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Extraction Confidence</h3>
+      <div className="flex items-center gap-4">
+        <svg width="72" height="72" viewBox="0 0 72 72" className="shrink-0">
+          <circle cx="36" cy="36" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-secondary" transform="rotate(-90 36 36)" />
+          <circle
+            cx="36" cy="36" r={r} fill="none"
+            stroke={color} strokeWidth="5"
+            strokeDasharray={`${dash} ${circ}`}
+            strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+            style={{ transition: "stroke-dasharray 0.6s ease" }}
+          />
+          <text
+            x="36" y="40"
+            textAnchor="middle"
+            style={{ fontSize: "13px", fontWeight: 600, fill: "currentColor" }}
+          >
+            {pct}%
+          </text>
+        </svg>
+        <div>
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{subLabel}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BulletList({ title, items, emptyText, icon }: {
+  title: string;
+  items: string[];
+  emptyText: string;
+  icon?: "warning" | "bullet";
+}) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</h3>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground/50 italic">{emptyText}</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item, i) => (
+            <li key={i} className="text-sm text-foreground/80 flex gap-2 leading-snug">
+              {icon === "warning" ? (
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+              ) : (
+                <span className="text-accent shrink-0 mt-0.5">•</span>
+              )}
+              <span className="line-clamp-2">{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AssumptionFragility({ assumptions }: { assumptions: Array<{ text?: string; fragility?: number }> }) {
+  const top = [...assumptions]
+    .filter((a) => a.text)
+    .sort((a, b) => (b.fragility ?? 0) - (a.fragility ?? 0))
+    .slice(0, 3);
+
+  if (top.length === 0) return null;
+
+  function dotColor(f: number) {
+    if (f >= 0.7) return "bg-red-400";
+    if (f >= 0.4) return "bg-amber-400";
+    return "bg-green-400";
+  }
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Assumption Fragility</h3>
+      <ul className="space-y-2">
+        {top.map((a, i) => (
+          <li key={i} className="flex gap-2 text-sm text-foreground/80 leading-snug">
+            <span className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${dotColor(a.fragility ?? 0)}`} />
+            <span className="line-clamp-2">{a.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function DecisionOutputInsights({
+  extractionSchema,
+  pressureTestState,
+  insights,
+}: {
+  extractionSchema: Record<string, unknown> | null | undefined;
+  pressureTestState: PressureTestState | null | undefined;
+  insights: ReturnType<typeof deriveInsights>;
+}) {
+  const confidence = (extractionSchema?.confidence as Record<string, number> | undefined)?.overall_confidence ?? 0;
+  const hiddenDeps = (extractionSchema?.hidden_deps as string[] | undefined) ?? [];
+  const assumptions = (extractionSchema?.assumptions as Array<{ text?: string; fragility?: number }> | undefined) ?? [];
+  const synthesis = (pressureTestState?.summary as Record<string, unknown> | null | undefined);
+  const whatBelieved = (synthesis?.what_founder_believed as string[] | undefined) ?? [];
+  const commitments = (synthesis?.commitments_made as string[] | undefined) ?? [];
+
+  return (
+    <div className="flex-1 space-y-6 overflow-y-auto scroll-container">
+      <ConfidenceGauge value={confidence} />
+      <div className="border-t border-border/30" />
+
+      <BulletList
+        title="Pressure Test Synthesis"
+        items={whatBelieved.slice(0, 3)}
+        emptyText="Complete pressure test to see synthesis."
+      />
+      <div className="border-t border-border/30" />
+
+      <AssumptionFragility assumptions={assumptions} />
+      {assumptions.filter((a) => a.text).length > 0 && <div className="border-t border-border/30" />}
+
+      <BulletList
+        title="Hidden Dependencies"
+        items={hiddenDeps.slice(0, 3)}
+        emptyText="No hidden dependencies detected."
+        icon="warning"
+      />
+      <div className="border-t border-border/30" />
+
+      <BulletList
+        title="Suggestions"
+        items={insights.suggestions}
+        emptyText="No suggestions at this stage."
+      />
+      <div className="border-t border-border/30" />
+
+      <BulletList
+        title="Think About"
+        items={insights.thinkAbout}
+        emptyText="Think-about items load after pressure test."
+      />
+
+      {commitments.length > 0 && (
+        <>
+          <div className="border-t border-border/30" />
+          <BulletList
+            title="Commitments Made"
+            items={commitments}
+            emptyText=""
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
 export function RightPanel({
   view,
   threadId,
@@ -177,7 +350,7 @@ export function RightPanel({
   }
 
   return (
-    <aside className="w-80 h-full bg-card rounded-2xl border border-border/50 p-5 relative flex flex-col">
+    <aside className="w-[330px] h-full bg-card rounded-2xl border border-border/50 p-5 relative flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -215,8 +388,17 @@ export function RightPanel({
         </div>
       )}
 
-      {/* Four insight blocks — always visible when a thread is active */}
-      {hasThread && (
+      {/* Decision output view — purpose-built panel */}
+      {hasThread && view === "decision-output" && (
+        <DecisionOutputInsights
+          extractionSchema={extractionSchema}
+          pressureTestState={pressureTestState}
+          insights={insights}
+        />
+      )}
+
+      {/* All other views — generic insight blocks */}
+      {hasThread && view !== "decision-output" && (
         <div className="flex-1 space-y-6 overflow-y-auto scroll-container">
           <InsightBlock
             title="Suggestions"

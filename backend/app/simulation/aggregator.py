@@ -19,7 +19,7 @@ def aggregate(utilities: np.ndarray, lambdas: dict | None = None) -> dict:
 
     mean_u = float(np.mean(utilities))
     std_u = float(np.std(utilities))
-    downside = float(np.mean(utilities < 0))
+    downside = float(np.mean(utilities < 0.5))
 
     # CVaR (Conditional Value at Risk) at 5% level
     p5 = np.percentile(utilities, 5)
