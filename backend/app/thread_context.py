@@ -7,8 +7,7 @@ def build_thread_context(thread: dict) -> str:
     Accepts dicts with camelCase keys (clarifyDraft, pressureTest, extractionSchema).
     Returns "" when nothing meaningful is available so callers can skip the section.
 
-    Token budget: ~150–200 tokens total.
-    All text fields are hard-truncated. Lists are capped at 3 items max.
+    Token budget: ~500 tokens — enough for the LLM to give specific, grounded bullets.
     """
     parts: list[str] = []
 
@@ -16,19 +15,19 @@ def build_thread_context(thread: dict) -> str:
     draft = thread.get("clarifyDraft") or {}
     if draft:
         if draft.get("title"):
-            parts.append(f"DECISION: {draft['title'][:100]}")
+            parts.append(f"DECISION: {draft['title'][:150]}")
         if draft.get("coreProblem"):
-            parts.append(f"CORE PROBLEM: {draft['coreProblem'][:200]}")
+            parts.append(f"CORE PROBLEM: {draft['coreProblem'][:400]}")
         if draft.get("desiredOutcome"):
-            parts.append(f"DESIRED OUTCOME: {draft['desiredOutcome'][:120]}")
+            parts.append(f"DESIRED OUTCOME: {draft['desiredOutcome'][:250]}")
         if draft.get("context"):
-            parts.append(f"CONTEXT: {draft['context'][:200]}")
-        constraints = [c[:80] for c in (draft.get("constraints") or []) if c][:3]
+            parts.append(f"CONTEXT: {draft['context'][:400]}")
+        constraints = [c[:150] for c in (draft.get("constraints") or []) if c][:5]
         if constraints:
-            parts.append("CONSTRAINTS: " + "; ".join(constraints))
-        assumptions = [a[:80] for a in (draft.get("assumptions") or []) if a][:3]
+            parts.append("CONSTRAINTS:\n" + "\n".join(f"  - {c}" for c in constraints))
+        assumptions = [a[:150] for a in (draft.get("assumptions") or []) if a][:5]
         if assumptions:
-            parts.append("FOUNDER ASSUMPTIONS: " + "; ".join(assumptions))
+            parts.append("FOUNDER ASSUMPTIONS:\n" + "\n".join(f"  - {a}" for a in assumptions))
 
     # --- Extraction schema highlights (high-signal only) ---
     schema = thread.get("extractionSchema") or {}
@@ -88,12 +87,12 @@ def build_thread_context(thread: dict) -> str:
             answered_roots = [
                 r for r in root_scenarios
                 if r.get("answer") and not r.get("status") == "open"
-            ][:3]
+            ][:5]
             if answered_roots:
                 qa_parts = ["PRESSURE TEST — FOUNDER'S RESPONSES:"]
                 for root in answered_roots:
-                    q = (root.get("question") or "")[:100]
-                    a = (root.get("answer") or "")[:150]
+                    q = (root.get("question") or "")[:150]
+                    a = (root.get("answer") or "")[:300]
                     qa_parts.append(f"  Q: {q}\n  A: {a}")
                 parts.append("\n".join(qa_parts))
         else:
@@ -103,13 +102,13 @@ def build_thread_context(thread: dict) -> str:
                 (sid, r)
                 for sid, r in (pressure.get("responses") or {}).items()
                 if isinstance(r, dict) and not r.get("skipped") and (r.get("answer") or "").strip()
-            ][:3]
+            ][:5]
             if answered:
                 qa_parts = ["PRESSURE TEST — FOUNDER'S RESPONSES:"]
                 for sid, resp in answered:
                     s = scenarios.get(sid, {})
-                    q = (s.get("scenario") or s.get("question") or "")[:100]
-                    a = resp["answer"][:150]
+                    q = (s.get("scenario") or s.get("question") or "")[:150]
+                    a = resp["answer"][:300]
                     qa_parts.append(f"  Q: {q}\n  A: {a}")
                 parts.append("\n".join(qa_parts))
 

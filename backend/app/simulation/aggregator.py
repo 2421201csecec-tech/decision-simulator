@@ -44,6 +44,10 @@ def aggregate(utilities: np.ndarray, lambdas: dict | None = None) -> dict:
     base_case = float(np.percentile(utilities, 50))
     worst_case = float(np.mean(bottom_band)) if len(bottom_band) > 0 else float(p20)
 
+    hist, bin_edges = np.histogram(utilities, bins=50, range=(0.0, 1.0), density=True)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    histogram = [[round(float(c), 4), round(float(h), 4)] for c, h in zip(bin_centers, hist)]
+
     return {
         "mean": round(mean_u, 4),
         "std": round(std_u, 4),
@@ -54,6 +58,7 @@ def aggregate(utilities: np.ndarray, lambdas: dict | None = None) -> dict:
         "best_case": round(best_case, 4),
         "base_case": round(base_case, 4),
         "worst_case": round(worst_case, 4),
+        "histogram": histogram,
     }
 
 

@@ -111,14 +111,21 @@ export interface SimulationOption {
   best_case: number;
   base_case: number;
   worst_case: number;
+  histogram?: [number, number][]; // [bin_center, density] — 50 bins from Monte Carlo
+}
+
+export interface ExplanationBullet {
+  title: string;
+  description: string;
+  tag: string;
 }
 
 export interface SimulationExplanation {
   verdict: string;
   key_assumption: string;
-  ideal_case?: string[];
-  base_case?: string[];
-  worst_case?: string[];
+  ideal_case?: ExplanationBullet[];
+  base_case?: ExplanationBullet[];
+  worst_case?: ExplanationBullet[];
 }
 
 export interface SimulationRun {
@@ -144,6 +151,7 @@ export interface ExtractionVariable {
   importance: "critical" | "high" | "medium" | "low";
   direction: "maximize" | "minimize";
   extraction_confidence: number;
+  unit?: string;
 }
 
 export interface DecisionOutputData {

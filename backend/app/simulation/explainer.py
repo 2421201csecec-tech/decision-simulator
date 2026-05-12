@@ -46,6 +46,59 @@ def _resolve_variable_name(schema: dict, variable_id: str | None) -> str:
     return variable_id
 
 
+def _format_avm_context(schema: dict, user_values: dict[str, float]) -> str:
+    """For each action, show what it does to each variable vs. what the user selected.
+    This grounds the LLM in real-world numbers per option, not just winner metrics.
+    """
+    actions = schema.get("actions") or []
+    variables = schema.get("variables") or []
+    avm = schema.get("action_variable_map") or {}
+    if not actions or not variables or not avm:
+        return ""
+
+    var_map = {v.get("variable_id", ""): v for v in variables}
+
+    def _fmt(val: float, var: dict) -> str:
+        unit = (var.get("unit") or "").lower()
+        r = var.get("range") or [0, 1]
+        hi = float(r[1])
+        name_lower = (var.get("name") or "").lower()
+        if "rs" in unit or "₹" in unit or "rupee" in unit or "inr" in unit:
+            return f"₹{int(val):,}"
+        if "%" in unit or "rate" in name_lower or "ratio" in name_lower or "growth" in name_lower:
+            return f"{val * 100:.1f}%" if val <= 1 else f"{val:.1f}%"
+        if val == int(val):
+            if hi <= 10:
+                return f"{int(val)}/{int(hi)}"
+            return str(int(val))
+        return str(round(val, 2))
+
+    lines = ["ACTION VARIABLE IMPACTS (what each option assumes for each variable):"]
+    for action in actions:
+        action_id = action.get("action_id") or action.get("id") or ""
+        label = action.get("label") or action_id
+        action_vars = avm.get(action_id, {})
+        lines.append(f"\n{label}:")
+        for var in variables:
+            if var.get("type") not in ("continuous", "ordinal"):
+                continue
+            vid = var.get("variable_id", "")
+            vname = var.get("name") or vid
+            override = action_vars.get(vid) or action_vars.get(f"var_{vid}")
+            user_val = user_values.get(vid)
+            r = var.get("range") or [0, 1]
+
+            if override is not None:
+                override_str = _fmt(float(override), var)
+                user_str = _fmt(float(user_val), var) if user_val is not None else "midpoint"
+                lines.append(f"  - {vname}: this option targets {override_str} (you set: {user_str}; range: {r[0]}–{r[1]})")
+            elif user_val is not None:
+                user_str = _fmt(float(user_val), var)
+                lines.append(f"  - {vname}: no specific target (you set: {user_str}; range: {r[0]}–{r[1]})")
+
+    return "\n".join(lines)
+
+
 def _format_user_values(schema: dict, user_values: dict[str, float]) -> str:
     """Build a human-readable list of the user's selected variable values."""
     lines = []
@@ -98,6 +151,7 @@ async def generate_explanation(
 
     key_variable_name = _resolve_variable_name(schema, key_variable_id)
     user_values_text = _format_user_values(schema, uv)
+    avm_context = _format_avm_context(schema, uv)
 
     actions_list = schema.get("actions") or []
     actions_text = "\n".join(
@@ -110,6 +164,8 @@ async def generate_explanation(
         if thread_context.strip() else ""
     )
 
+    avm_block = f"\n{avm_context}" if avm_context.strip() else ""
+
     template = (_PROMPT_DIR / "simulation_explain_v1.0.0.txt").read_text(encoding="utf-8")
     prompt = _fill_template(
         template,
@@ -117,6 +173,7 @@ async def generate_explanation(
         actions=actions_text,
         user_values_text=user_values_text,
         thread_context=context_block,
+        avm_context=avm_block,
         winner_label=winner.get("label") or winner.get("id") or "Option A",
         winner_score=str(round(float(winner.get("score", 0)), 3)),
         winner_mean=str(round(float(winner.get("mean", 0)), 3)),

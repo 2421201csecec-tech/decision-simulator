@@ -276,6 +276,11 @@ export default function Dashboard() {
             selectedThreadId={selectedThreadId}
             onSelectThread={handleSelectThread}
             onFailureAnalysis={handleFailureAnalysis}
+            onSimulation={(thread) => {
+              setSelectedThreadId(thread.id);
+              setView("simulation");
+              setRightCollapsed(true);
+            }}
           />
           </div>
 

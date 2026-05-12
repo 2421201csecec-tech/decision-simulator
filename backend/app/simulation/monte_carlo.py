@@ -64,7 +64,8 @@ def _run(schema: dict, user_values: dict[str, float], n: int) -> dict[str, np.nd
 
         for var in variables:
             var_id = var.get("variable_id") or ""
-            override_value = action_vars.get(var_id)
+            # AVM keys may be stored with a "var_" prefix by the LLM extractor
+            override_value = action_vars.get(var_id) or action_vars.get(f"var_{var_id}")
             user_value = user_values.get(var_id)
             mean, std = _variable_distribution(var, override_value, user_value)
 
@@ -77,6 +78,9 @@ def _run(schema: dict, user_values: dict[str, float], n: int) -> dict[str, np.nd
             utilities += direction_sign * weight * norm
 
         utilities /= max(total_weight, 1e-9)
+        # Raw range is [-1, +1]: maximize vars contribute positive, minimize vars negative.
+        # Shift to [0, 1] so 0.5 = neutral, 1.0 = ideal, 0.0 = worst.
+        utilities = (utilities + 1) / 2
         results[action_id] = utilities
 
     return results

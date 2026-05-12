@@ -29,6 +29,7 @@ interface LeftPanelProps {
   selectedThreadId?: string | null;
   onSelectThread?: (thread: ThreadRecord) => void;
   onFailureAnalysis?: (thread: ThreadRecord) => void;
+  onSimulation?: (thread: ThreadRecord) => void;
 }
 
 function toNavSections(grouped: GroupedThreads, selectedThreadId?: string | null): NavSection[] {
@@ -65,6 +66,7 @@ export function LeftPanel({
   selectedThreadId,
   onSelectThread,
   onFailureAnalysis,
+  onSimulation,
 }: LeftPanelProps) {
   const navigationData = toNavSections(groupedThreads, selectedThreadId);
   const sectionByTitle: Record<string, ThreadRecord[]> = {
@@ -149,6 +151,14 @@ export function LeftPanel({
                             }}
                           >
                             Open
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const thread = sectionByTitle[section.title]?.[itemIndex];
+                              if (thread) onSimulation?.(thread);
+                            }}
+                          >
+                            Run Simulation
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {

@@ -1,4 +1,4 @@
-You are helping someone understand a Monte Carlo simulation of their real-life decision. Output only valid JSON — no markdown, no explanation outside the JSON object.
+You are helping a founder understand exactly what just happened in their Monte Carlo simulation. Output only valid JSON — no markdown, no text outside the JSON object.
 
 DECISION: {decision}
 {thread_context}
@@ -12,47 +12,65 @@ Simulation confidence winner is better: {confidence_pct}%
 
 USER'S SELECTED VALUES FOR THIS SIMULATION:
 {user_values_text}
+{avm_context}
 
 SCENARIO BANDS (from 10,000 runs of the recommended decision):
-  Best 20% of outcomes:   {winner_best_case}
-  Median outcome:         {winner_base_case}
-  Worst 20% of outcomes:  {winner_worst_case}
+  Best 20% of outcomes (aggressive):   {winner_best_case}
+  Median outcome (base):               {winner_base_case}
+  Worst 20% of outcomes (pessimistic): {winner_worst_case}
 
 Most sensitive variable: {key_variable_name}
 (A 20% change in this variable produces the largest shift in outcome)
 
 YOUR TASK:
-Write three sets of 3 bullet points explaining what the RECOMMENDED DECISION means for this person in plain English, using their actual values where relevant.
+The founder just ran the simulation. Explain in plain English what it means — grounded in THEIR specific numbers, context, and answers above. Reference actual values (e.g., ₹1,00,000 budget, 6-month timeline, 4/5 meeting needs). Do NOT be generic.
 
-ideal_case — 3 bullets for when things go RIGHT:
-  First bullet: a specific positive outcome that becomes possible (use their actual values)
-  Second bullet: what they can comfortably afford, achieve, or avoid in this scenario
-  Third bullet: the stability, breathing room, or opportunity this option opens up
+Write three sets of 3 bullets — one set per scenario. Each bullet is a card with:
+- "title": 3–5 word headline (the thing that happens)
+- "description": 1–2 sentences — the real-world consequence with actual numbers from their context
+- "tag": a short label (for ideal_case: "High upside" / "Strong signal" / "Opportunity"; for base_case: "Watch closely" / "Manageable" / "Key tradeoff"; for worst_case: "High severity" / "Medium severity" / "Tail risk")
 
-base_case — 3 bullets for the REALISTIC expectation:
-  First bullet: what day-to-day actually looks like — what's tight, what works
-  Second bullet: what requires careful management or attention
-  Third bullet: the main uncertainty or tradeoff they should keep watching
+ideal_case — when things go RIGHT:
+  Bullet 1: the biggest specific win this option unlocks given their values
+  Bullet 2: what they can comfortably afford or achieve in this scenario
+  Bullet 3: the breathing room or compounding advantage this creates
 
-worst_case — 3 bullets for when things go WRONG:
-  First bullet: the first concrete thing that breaks or becomes unaffordable (use their values)
-  Second bullet: how the problem cascades — what else becomes unmanageable as a result
-  Third bullet: the hardest real-world consequence they'd face
+base_case — the REALISTIC day-to-day:
+  Bullet 1: what actually working looks like — what's tight, what holds
+  Bullet 2: what requires active management or monitoring
+  Bullet 3: the one uncertainty that could shift this either way
 
-STRICT RULES — breaking any rule means a wrong answer:
-1. NEVER use technical terms: "utility", "CVaR", "score", "downside probability", "std", "mean"
-2. NEVER use raw simulation decimals like 0.107, -0.051, 0.588 — these are internal numbers
-3. DO use actual values from USER'S SELECTED VALUES (e.g., ₹33,333/month, 14 months, 15%)
-4. Each bullet = one concrete real-world consequence — not a mathematical statement
-5. Write as if speaking directly to the person making this decision
-6. Bullets must be specific to THIS decision and domain — no generic financial advice
-7. Exactly 3 bullets per case — no more, no less
+worst_case — when things go WRONG:
+  Bullet 1: the first concrete thing that breaks or becomes unaffordable (use their numbers)
+  Bullet 2: how it cascades — what else fails as a result
+  Bullet 3: the hardest real-world consequence they'd face
 
-Return exactly this JSON with your bullets filled in as plain strings:
+STRICT RULES:
+1. NEVER use technical terms: "utility", "CVaR", "score", "downside probability", "std", "mean", "simulation"
+2. NEVER use raw decimals like 0.107 or 0.671 — these are internal numbers
+3. DO reference actual values from USER'S SELECTED VALUES and ACTION VARIABLE IMPACTS
+4. Each bullet = one concrete real-world consequence grounded in their specific situation
+5. Write directly to this founder — "your", "you", not "the founder"
+6. Bullets must be specific to THIS decision and domain — no generic advice
+7. Exactly 3 bullets per case
+
+Return exactly this JSON:
 {
-  "verdict": "one sentence — why the recommended decision is better right now, plain English, no numbers",
-  "key_assumption": "one sentence — the one real-world condition that could change this recommendation",
-  "ideal_case": ["...", "...", "..."],
-  "base_case": ["...", "...", "..."],
-  "worst_case": ["...", "...", "..."]
+  "verdict": "one sentence — why the recommended decision is better right now, plain English, referencing their context",
+  "key_assumption": "one sentence — the one real-world condition that most affects whether this recommendation holds",
+  "ideal_case": [
+    { "title": "...", "description": "...", "tag": "..." },
+    { "title": "...", "description": "...", "tag": "..." },
+    { "title": "...", "description": "...", "tag": "..." }
+  ],
+  "base_case": [
+    { "title": "...", "description": "...", "tag": "..." },
+    { "title": "...", "description": "...", "tag": "..." },
+    { "title": "...", "description": "...", "tag": "..." }
+  ],
+  "worst_case": [
+    { "title": "...", "description": "...", "tag": "..." },
+    { "title": "...", "description": "...", "tag": "..." },
+    { "title": "...", "description": "...", "tag": "..." }
+  ]
 }
