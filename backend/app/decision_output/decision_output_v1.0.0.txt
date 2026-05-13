@@ -14,6 +14,7 @@ TASK:
 Generate a clear, specific decision verdict based on ALL the above — both the extracted structure and what the founder actually said during pressure testing.
 
 STRICT RULES:
+- decisionTitle: 3-6 words, title case, professional — clean restatement of the decision being made (no typos, no vague phrasing, no raw user input)
 - finalDecision: one sentence, must name the recommended option explicitly, include specific numbers/timeframes from context
 - keyReasons: derived from what the founder said in their pressure test answers — not generic statements
 - keyRisks: specific to this decision context — reference actual risks from extraction or pressure test
@@ -25,11 +26,12 @@ STRICT RULES:
 
 OUTPUT FORMAT — return ONLY a valid JSON object, no markdown, no explanation:
 {
+  "decisionTitle": "string",
   "finalDecision": "string",
   "keyReasons": ["string", "string", "string"],
   "keyRisks": ["string", "string"],
   "assumptions": ["string", "string", "string"],
-  "decisionStrength": 72,
+  "decisionStrength": <integer 0-100, computed from how well-tested and clear the reasoning is>,
   "strengths": ["string", "string"],
   "weakPoints": ["string", "string"],
   "suggestedExperiment": "string"

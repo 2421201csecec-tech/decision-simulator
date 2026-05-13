@@ -11,7 +11,7 @@ logger = logging.getLogger("decision_output.generator")
 _PROMPT_DIR = Path(__file__).parent
 
 _REQUIRED_KEYS = {
-    "finalDecision", "keyReasons", "keyRisks", "assumptions",
+    "decisionTitle", "finalDecision", "keyReasons", "keyRisks", "assumptions",
     "decisionStrength", "strengths", "weakPoints", "suggestedExperiment",
 }
 

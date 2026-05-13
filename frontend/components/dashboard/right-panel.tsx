@@ -152,7 +152,7 @@ function InsightBlock({
 // ---------------------------------------------------------------------------
 
 function confidenceLevel(pct: number): { label: string; subLabel: string; color: string } {
-  if (pct >= 80) return { label: "Strong signal", subLabel: "Context clear", color: "#4ade80" };
+  if (pct >= 80) return { label: "Strong signal", subLabel: "Context clear", color: "#109c56" };
   if (pct >= 60) return { label: "Good signal", subLabel: "Context well-understood", color: "var(--accent)" };
   if (pct >= 40) return { label: "Moderate signal", subLabel: "Some gaps remain", color: "#fbbf24" };
   return { label: "Weak signal", subLabel: "Context unclear", color: "#f87171" };
@@ -160,7 +160,7 @@ function confidenceLevel(pct: number): { label: string; subLabel: string; color:
 
 function ConfidenceGauge({ value }: { value: number }) {
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
-  const r = 28;
+  const r = 36;
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
   const { label, subLabel, color } = confidenceLevel(pct);
@@ -169,20 +169,20 @@ function ConfidenceGauge({ value }: { value: number }) {
     <div className="space-y-2">
       <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Extraction Confidence</h3>
       <div className="flex items-center gap-4">
-        <svg width="72" height="72" viewBox="0 0 72 72" className="shrink-0">
-          <circle cx="36" cy="36" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-secondary" transform="rotate(-90 36 36)" />
+        <svg width="90" height="90" viewBox="0 0 90 90" className="shrink-0">
+          <circle cx="45" cy="45" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-secondary" transform="rotate(-90 45 45)" />
           <circle
-            cx="36" cy="36" r={r} fill="none"
+            cx="45" cy="45" r={r} fill="none"
             stroke={color} strokeWidth="5"
             strokeDasharray={`${dash} ${circ}`}
             strokeLinecap="round"
-            transform="rotate(-90 36 36)"
+            transform="rotate(-90 45 45)"
             style={{ transition: "stroke-dasharray 0.6s ease" }}
           />
           <text
-            x="36" y="40"
+            x="45" y="50"
             textAnchor="middle"
-            style={{ fontSize: "13px", fontWeight: 600, fill: "currentColor" }}
+            style={{ fontSize: "15px", fontWeight: 600, fill: "currentColor" }}
           >
             {pct}%
           </text>
@@ -273,17 +273,14 @@ function DecisionOutputInsights({
   return (
     <div className="flex-1 space-y-6 overflow-y-auto scroll-container">
       <ConfidenceGauge value={confidence} />
-      <div className="border-t border-border/30" />
+      <div className="border-t border-accent/60" />
 
       <BulletList
         title="Pressure Test Synthesis"
         items={whatBelieved.slice(0, 3)}
         emptyText="Complete pressure test to see synthesis."
       />
-      <div className="border-t border-border/30" />
-
-      <AssumptionFragility assumptions={assumptions} />
-      {assumptions.filter((a) => a.text).length > 0 && <div className="border-t border-border/30" />}
+      <div className="border-t border-accent/60" />
 
       <BulletList
         title="Hidden Dependencies"
@@ -291,20 +288,7 @@ function DecisionOutputInsights({
         emptyText="No hidden dependencies detected."
         icon="warning"
       />
-      <div className="border-t border-border/30" />
-
-      <BulletList
-        title="Suggestions"
-        items={insights.suggestions}
-        emptyText="No suggestions at this stage."
-      />
-      <div className="border-t border-border/30" />
-
-      <BulletList
-        title="Think About"
-        items={insights.thinkAbout}
-        emptyText="Think-about items load after pressure test."
-      />
+      <div className="border-t border-accent/60" />
 
       {commitments.length > 0 && (
         <>
