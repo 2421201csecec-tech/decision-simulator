@@ -1,4 +1,4 @@
-# OS/editor
+d# OS/editor
 .DS_Store
 Thumbs.db
 .vscode/
@@ -43,3 +43,6 @@ frontend/.data/*
 *.pyc
 backend/.venv/
 backend/dev.db
+
+# Internal docs
+docs/
