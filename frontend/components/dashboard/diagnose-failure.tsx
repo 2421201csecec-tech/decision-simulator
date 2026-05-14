@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, CheckCircle, XCircle, MinusCircle, Plus, X } fro
 import { cn } from "@/lib/utils";
 import {
   fetchFailureAnalysis,
+  fetchDecisionOutput,
   saveFailureAnalysis,
   type AssumptionGap,
   type FailureLesson,
@@ -15,6 +16,7 @@ interface DiagnoseFailureProps {
   failedDecision: string;
   onBack: () => void;
   onRebuild: (context: { failedTitle: string; failedLessons: string[] }) => void;
+  onAnalysisComplete?: (data: { likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; }) => void;
 }
 
 type Step = 0 | 1 | 2 | 3 | 4 | "analyzing" | 5 | 6;
@@ -52,10 +54,11 @@ function VerdictBadge({ verdict }: { verdict: AssumptionGap["verdict"] }) {
   );
 }
 
-export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild }: DiagnoseFailureProps) {
+export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, onAnalysisComplete }: DiagnoseFailureProps) {
   const [step, setStep] = useState<Step>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cleanTitle, setCleanTitle] = useState<string | null>(null);
 
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
 
@@ -76,6 +79,9 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild }:
 
   useEffect(() => {
     if (!threadId) { setLoading(false); return; }
+    fetchDecisionOutput(threadId)
+      .then((data) => { if (data.decisionTitle) setCleanTitle(data.decisionTitle); })
+      .catch(() => {});
     fetchFailureAnalysis(threadId)
       .then((data) => {
         setSnapshot((data.snapshot as Record<string, unknown>) || null);
@@ -89,6 +95,14 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild }:
           setRecommendation(data.recommendation || "");
           setLessons(data.lessons || []);
           setStep(5);
+          if (data.likelyRootCause && onAnalysisComplete) {
+            onAnalysisComplete({
+              likelyRootCause: data.likelyRootCause,
+              cognitiveBias: data.cognitiveBias || "",
+              missedVariable: data.missedVariable || "",
+              recommendation: data.recommendation || "",
+            });
+          }
         }
       })
       .catch(() => setError("Unable to load failure analysis."))
@@ -117,6 +131,14 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild }:
       setRecommendation(data.recommendation || "");
       setLessons(data.lessons || []);
       setStep(5);
+      if (data.likelyRootCause && onAnalysisComplete) {
+        onAnalysisComplete({
+          likelyRootCause: data.likelyRootCause,
+          cognitiveBias: data.cognitiveBias || "",
+          missedVariable: data.missedVariable || "",
+          recommendation: data.recommendation || "",
+        });
+      }
     } catch {
       setError("Analysis failed. You can go back and try again.");
       setStep(4);
@@ -148,7 +170,7 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild }:
           <div className="rounded-2xl border border-border/50 bg-secondary/30 p-6 space-y-5">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Decision</p>
-              <p className="text-lg font-semibold text-foreground">{(snapshot?.title as string) || failedDecision}</p>
+              <p className="text-lg font-semibold text-foreground">{cleanTitle || (snapshot?.title as string) || failedDecision}</p>
             </div>
             {!!snapshot?.coreProblem && (
               <div>

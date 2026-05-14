@@ -53,6 +53,7 @@ export default function Dashboard() {
   const [isAnalyzingDraft, setIsAnalyzingDraft] = useState(false);
   const [pressureTestState, setPressureTestState] = useState<PressureTestState | null>(null);
   const [extractionSchema, setExtractionSchema] = useState<Record<string, unknown> | null>(null);
+  const [failureInsights, setFailureInsights] = useState<{ likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; } | null>(null);
   const autosaveResetTimerRef = useRef<number | null>(null);
   const lastAutosavedByThreadRef = useRef<Record<string, string>>({});
 
@@ -302,6 +303,7 @@ export default function Dashboard() {
             selectedFailedDecision={selectedFailedDecision}
             onPressureStateChange={setPressureTestState}
             reentryContext={reentryContext}
+            onFailureAnalysisComplete={setFailureInsights}
           />
 
           {/* Right Panel - AI Insights */}
@@ -323,6 +325,7 @@ export default function Dashboard() {
               pressureTestState={pressureTestState}
               extractionSchema={extractionSchema}
               clarifyDraft={decisionData}
+              failureInsights={failureInsights}
             />
           </div>
         </div>

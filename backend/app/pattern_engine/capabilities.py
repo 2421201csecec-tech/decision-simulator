@@ -3,6 +3,15 @@ from __future__ import annotations
 import hashlib
 import logging
 
+
+# This module computes the "capabilities" for a given user+category,
+# which are used to gate various pattern engine features like injection and biasing.
+# The main function is get_capabilities(), which returns a dict of flags and parameters 
+# based on the user's profile and experiment group. The capabilities are computed at the 
+# start of each extraction, and can be used to determine whether to apply pattern injection, 
+# failure biasing, predictive adjustment, etc.
+
+
 from app.pattern_engine.constants import (
     AB_CONTROL_PCT,
     BLEND_CONFIDENCE_WEIGHT,

@@ -58,9 +58,10 @@ interface CenterPanelProps {
   selectedFailedDecision?: string | null;
   onPressureStateChange?: (state: any) => void;
   reentryContext?: { failedTitle: string; failedLessons: string[] } | null;
+  onFailureAnalysisComplete?: (data: { likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; }) => void;
 }
 
-export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext }: CenterPanelProps) {
+export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext, onFailureAnalysisComplete }: CenterPanelProps) {
   if (view === "clarify") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
@@ -115,6 +116,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           failedDecision={selectedFailedDecision || "Unknown Decision"}
           onBack={onBack}
           onRebuild={onRebuildDecision || ((_ctx) => {})}
+          onAnalysisComplete={onFailureAnalysisComplete}
         />
       </main>
     );

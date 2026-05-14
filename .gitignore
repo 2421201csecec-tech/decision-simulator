@@ -46,3 +46,4 @@ backend/dev.db
 
 # Internal docs
 docs/
+CLAUDE.md

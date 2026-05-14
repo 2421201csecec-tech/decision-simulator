@@ -15,8 +15,12 @@ logger = logging.getLogger("pattern_engine.profile_service")
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
+# This module implements the core read/write operations for user pattern profiles and global aggregate patterns.
+# It provides functions to get active patterns for a user and category, get global priors,
+# and upsert themes into a user's pattern profile. It also includes backward-compatible functions to read/write
 
-def _flat_to_theme(pat: dict) -> dict:
+def _flat_to_theme(pat: dict) -> dict: 
+#
     """Convert old flat patterns[] shape to a minimal theme dict for backward compat."""
     return {
         "pattern_id": pat.get("pattern_type", ""),  # no UUID in old shape

@@ -20,6 +20,13 @@ interface ClarifyDraft {
   assumptions?: string[];
 }
 
+interface FailureInsights {
+  likelyRootCause: string;
+  cognitiveBias: string;
+  missedVariable: string;
+  recommendation: string;
+}
+
 interface RightPanelProps {
   view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
   threadId?: string | null;
@@ -32,6 +39,7 @@ interface RightPanelProps {
   pressureTestState?: PressureTestState | null;
   extractionSchema?: Record<string, unknown> | null;
   clarifyDraft?: ClarifyDraft | null;
+  failureInsights?: FailureInsights | null;
 }
 
 const TICKER_SEQUENCE = [
@@ -304,6 +312,29 @@ function DecisionOutputInsights({
   );
 }
 
+function FailureAnalysisInsights({ insights }: { insights: FailureInsights }) {
+  const items = [
+    { label: "Likely Root Cause", value: insights.likelyRootCause },
+    { label: "Cognitive Bias", value: insights.cognitiveBias },
+    { label: "Missed Variable", value: insights.missedVariable },
+    { label: "Recommendation", value: insights.recommendation },
+  ].filter((i) => i.value);
+
+  return (
+    <div className="flex-1 overflow-y-auto scroll-container space-y-4">
+      {items.map((item, i) => (
+        <div key={i}>
+          <div className="space-y-1.5">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{item.label}</h3>
+            <p className="text-sm text-foreground/80 leading-snug">{item.value}</p>
+          </div>
+          {i < items.length - 1 && <div className="border-t border-accent/60 mt-4" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function RightPanel({
   view,
   threadId,
@@ -312,6 +343,7 @@ export function RightPanel({
   pressureTestState,
   extractionSchema,
   clarifyDraft,
+  failureInsights,
 }: RightPanelProps) {
   const insights = useMemo(
     () => deriveInsights({ clarifyDraft, extractionSchema, pressureTest: pressureTestState }),
@@ -372,7 +404,7 @@ export function RightPanel({
         </div>
       )}
 
-      {/* Decision output view — purpose-built panel */}
+      {/* Decision output view */}
       {hasThread && view === "decision-output" && (
         <DecisionOutputInsights
           extractionSchema={extractionSchema}
@@ -381,8 +413,19 @@ export function RightPanel({
         />
       )}
 
+      {/* Failure analysis view */}
+      {hasThread && view === "failure-analysis" && (
+        failureInsights ? (
+          <FailureAnalysisInsights insights={failureInsights} />
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-muted-foreground/40 text-sm text-center italic">Complete the diagnosis to see insights.</p>
+          </div>
+        )
+      )}
+
       {/* All other views — generic insight blocks */}
-      {hasThread && view !== "decision-output" && (
+      {hasThread && view !== "decision-output" && view !== "failure-analysis" && (
         <div className="flex-1 space-y-6 overflow-y-auto scroll-container">
           <InsightBlock
             title="Suggestions"

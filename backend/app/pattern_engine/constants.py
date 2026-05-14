@@ -3,15 +3,19 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 # Injection / confidence thresholds
 # ---------------------------------------------------------------------------
-INJECT_THRESHOLD = 0.45
-BIAS_THRESHOLD = 0.60
-PREDICT_THRESHOLD = 0.75
-DECAY_FLOOR_GLOBAL = 0.15
-DECAY_FLOOR_CONFIRMED = 0.40
+INJECT_THRESHOLD = 0.45 # minimum confidence to inject a pattern into the simulation results
+BIAS_THRESHOLD = 0.60 # minimum confidence to apply biasing to the simulation scoring
+PREDICT_THRESHOLD = 0.75 # minimum confidence to apply predictive lambda adjustment to the simulation scoring
+DECAY_FLOOR_GLOBAL = 0.15 # minimum confidence for patterns to remain in the system at all (after decay)
+DECAY_FLOOR_CONFIRMED = 0.40 # minimum confidence for confirmed patterns to be applied in injection/biasing/predictive adjust (after decay)
 
 # ---------------------------------------------------------------------------
 # blend_weight gates
 # ---------------------------------------------------------------------------
+
+# blend_weight is the weight applied to failure biasing vs. a user's raw simulation history when
+# computing lambda adjustments.
+
 BLEND_WEIGHT_INJECT = 0.20
 BLEND_WEIGHT_BIAS = 0.45
 BLEND_WEIGHT_PREDICT = 0.75
@@ -24,13 +28,13 @@ BLEND_CONFIDENCE_WEIGHT = 0.20
 # ---------------------------------------------------------------------------
 # Dedup merge thresholds
 # ---------------------------------------------------------------------------
-DEDUP_MERGE_SIM = 0.85
-DEDUP_THEME_SIM = 0.65
+DEDUP_MERGE_SIM = 0.85 # cosine similarity threshold to merge two patterns into one (when computing active patterns for biasing/injection)
+DEDUP_THEME_SIM = 0.65 # cosine similarity threshold to merge two themes into one (when computing active themes for biasing/injection)
 
 # ---------------------------------------------------------------------------
 # Injection limits
 # ---------------------------------------------------------------------------
-MAX_PATTERNS_INJECTED = 3
+MAX_PATTERNS_INJECTED = 3 # maximum number of patterns to inject into the Pass 3 system prompt (when ENABLE_PATTERN_INJECTION=True)
 
 # ---------------------------------------------------------------------------
 # Global feedback gates
