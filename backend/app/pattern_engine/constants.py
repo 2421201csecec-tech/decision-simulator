@@ -85,3 +85,4 @@ ENABLE_FAILURE_BIASING = False     # Stage C: lambda adjustment in simulation
 ENABLE_PREDICTIVE_ADJUST = False   # Stage C: predictive lambda scaling
 ENABLE_GLOBAL_PRIORS = False       # Stage C: global aggregate_patterns blending
 ENABLE_DECAY_WORKER = False        # Stage C: nightly APScheduler decay pass
+ENABLE_BEHAVIORAL_PATTERNS = True  # Stage A general: classify raw inputs from clarify/PT/failure intake

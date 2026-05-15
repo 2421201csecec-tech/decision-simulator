@@ -37,4 +37,6 @@ class Settings:
     pattern_engine_enabled: bool = os.getenv("PATTERN_ENGINE_ENABLED", "false").lower() == "true"
 
 
+
+
 settings = Settings()

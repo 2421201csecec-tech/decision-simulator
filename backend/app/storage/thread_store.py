@@ -32,6 +32,7 @@ from app.storage.thread_repository import (
     get_weak_spots as _get_weak_spots,
     get_thread_export_data as _get_thread_export_data,
     get_all_threads_export_data as _get_all_threads_export_data,
+    cleanup_empty_threads as _cleanup_empty_threads,
 )
 
 ThreadStatus = Literal["active", "revision", "failed", "completed"]
@@ -123,3 +124,7 @@ async def get_thread_export_data(thread_id: str) -> dict[str, Any] | None:
 
 async def get_all_threads_export_data() -> list[dict[str, Any]]:
     return await _get_all_threads_export_data()
+
+
+async def cleanup_empty_threads(older_than_hours: int = 24) -> int:
+    return await _cleanup_empty_threads(older_than_hours)

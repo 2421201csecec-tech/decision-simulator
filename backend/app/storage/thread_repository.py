@@ -6,13 +6,14 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import uuid4
 
-from sqlalchemy import delete, select, update as sa_update
+from sqlalchemy import delete, func, select, update as sa_update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 
 import logging
 
 from app.db.engine import get_async_session
-from app.models.decision import Decision, FailureAnalysis, PatternProfile, SimulationRun
+from app.models.decision import Decision, FailureAnalysis, PatternInstance, PatternProfile, SimulationRun
 
 logger = logging.getLogger("thread_repository")
 
@@ -697,6 +698,20 @@ async def _submit_pressure_answer_v2(
         decision.updated_at = _now()
         await session.commit()
 
+        # Classify the raw answer as a behavioral pattern (fire-and-forget)
+        answer_text = probe["answer"] if probe_id else root.get("answer", "")
+        if answer_text and answer_text.strip():
+            asyncio.create_task(_classify_and_write_patterns(
+                user_id="default_user",
+                decision_id=thread_id,
+                inputs=[{"index": 0, "field_type": "pt_answer", "text": answer_text[:500]}],
+                source="pressure_test",
+                decision_category=str(decision.decision_category or ""),
+                clarify_draft=dict(decision.clarify_draft or {}),
+                extraction_schema=dict(decision.extraction_schema or {}),
+                pressure_test=pt,
+            ))
+
         return pt
 
 
@@ -1171,10 +1186,13 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
 
     async with get_async_session() as session:
         decision_result = await session.execute(
-            select(Decision.decision_id).where(Decision.decision_id == thread_id)
+            select(Decision.decision_id, Decision.decision_category)
+            .where(Decision.decision_id == thread_id)
         )
-        if decision_result.scalar_one_or_none() is None:
+        row = decision_result.first()
+        if row is None:
             return None
+        decision_category = row[1] or ""
 
         fa_result = await session.execute(
             select(FailureAnalysis).where(FailureAnalysis.decision_id == thread_id)
@@ -1232,7 +1250,30 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
 
         # Write lessons to pattern profile (fire-and-forget — does not block response)
         if lessons:
-            asyncio.create_task(_write_lessons_to_pattern_profile("default_user", lessons, thread_id))
+            asyncio.create_task(_write_lessons_to_pattern_profile("default_user", lessons, thread_id, decision_category))
+
+        # Classify raw failure intake answers as behavioral patterns (fire-and-forget)
+        intake_inputs = [
+            {"index": i, "field_type": "failure_intake", "text": t}
+            for i, t in enumerate([
+                payload.get("whatHappened", ""),
+                payload.get("expectedOutcome", ""),
+                payload.get("whatDid", ""),
+                payload.get("biggestSurprise", ""),
+            ])
+            if t and t.strip()
+        ]
+        if intake_inputs:
+            asyncio.create_task(_classify_and_write_patterns(
+                user_id="default_user",
+                decision_id=thread_id,
+                inputs=intake_inputs,
+                source="failure_analysis",
+                decision_category=decision_category,
+                clarify_draft=snapshot,  # snapshot IS the clarify_draft (flat dict)
+                extraction_schema={},
+                pressure_test={},
+            ))
 
         return _fa_to_dict(fa)
 
@@ -1245,7 +1286,160 @@ async def _get_pattern_list(user_id: str, session: Any) -> list[dict]:
     return list(row[0] or []) if row else []
 
 
-async def _write_lessons_to_pattern_profile(user_id: str, lessons: list[dict], decision_id: str) -> None:
+async def write_thinking_patterns(
+    user_id: str,
+    decision_id: str,
+    patterns: list[dict],
+    decision_category: str,
+) -> None:
+    """
+    Write classified patterns: idempotent PatternInstance insert + locked theme upsert.
+    All reads and writes share one DB transaction to prevent concurrent lost-updates.
+    patterns: [{slug, statement, field_type, source, raw_text, evidence}]
+    """
+    if not patterns:
+        return
+    import hashlib
+    from app.pattern_engine.confidence import compute_confidence, recency_days_from
+    from app.pattern_engine.dedup import run_dedup
+    from datetime import datetime, timezone as tz
+
+    def _embed_sync(text: str) -> list[float]:
+        try:
+            from app.extraction.memory.embedder import _model
+            if _model is None:
+                return []
+            vec = next(iter(_model.embed([text.strip()])), None)
+            return vec.tolist() if vec is not None else []
+        except Exception:
+            return []
+
+    now = datetime.now(tz.utc)
+
+    try:
+        async with get_async_session() as session:
+            async with session.begin():
+                # Lock the PatternProfile row early so all reads inside are consistent
+                result = await session.execute(
+                    select(PatternProfile)
+                    .where(PatternProfile.user_id == user_id)
+                    .with_for_update()
+                )
+                profile = result.scalar_one_or_none()
+                now_iso = now.isoformat()
+
+                if profile is None:
+                    profile = PatternProfile(
+                        user_id=user_id,
+                        patterns=[],
+                        themes=[],
+                        blend_weight=0.0,
+                        n_decisions=0,
+                        n_outcomes=0,
+                        updated_at=now,
+                        created_at=now,
+                        version=1,
+                    )
+                    session.add(profile)
+                    await session.flush()  # persist so SELECT COUNT below sees row
+
+                themes: list[dict] = list(profile.themes or [])
+
+                for pat in patterns:
+                    raw = pat.get("raw_text", "")[:500]
+                    raw_hash = hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+                    # Idempotent insert: skip if same (user, decision, slug, hash) exists
+                    stmt = (
+                        pg_insert(PatternInstance)
+                        .values(
+                            user_id=user_id,
+                            decision_id=decision_id,
+                            slug=pat["slug"],
+                            statement=pat["statement"],
+                            field_type=pat.get("field_type", "unknown"),
+                            source=pat.get("source", "unknown"),
+                            raw_text=raw,
+                            raw_text_hash=raw_hash,
+                            created_at=now,
+                        )
+                        .on_conflict_do_nothing(constraint="uq_pattern_instance")
+                    )
+                    await session.execute(stmt)
+
+                    # Count from DB (inside same transaction — sees just-inserted row)
+                    count = await session.scalar(
+                        select(func.count()).select_from(PatternInstance)
+                        .where(
+                            PatternInstance.user_id == user_id,
+                            PatternInstance.slug == pat["slug"],
+                        )
+                    ) or 1
+
+                    unique_decisions = await session.scalar(
+                        select(func.count(PatternInstance.decision_id.distinct()))
+                        .where(
+                            PatternInstance.user_id == user_id,
+                            PatternInstance.slug == pat["slug"],
+                        )
+                    ) or 1
+
+                    # Dedup against current themes, then write back
+                    emb = _embed_sync(pat["statement"])
+                    diversity = min(1.0, unique_decisions / max(count, 1))
+                    new_theme = {
+                        "pattern_id": str(__import__("uuid").uuid4()),
+                        "pattern_type": pat["slug"],
+                        "statement": pat["statement"],
+                        "failure_mode": pat["slug"],
+                        "decision_category": decision_category,
+                        "source": pat.get("source", "unknown"),
+                        "field_type": pat.get("field_type", "unknown"),
+                        "seen_in": [decision_id],
+                        "count": count,
+                        "first_seen": now_iso,
+                        "last_seen": now_iso,
+                        "confidence": compute_confidence(
+                            recency_days=0,
+                            consistency=diversity,
+                            outcome_confirmation=None,
+                            count=count,
+                        ),
+                        "embedding": emb if emb else None,
+                    }
+                    themes = run_dedup(themes, new_theme, decision_id)
+
+                # Lazy embedding backfill: embed themes that missed embedding (model not ready at write time)
+                try:
+                    from app.extraction.memory.embedder import _model
+                    from app.pattern_engine.confidence import compute_confidence as _cc, recency_days_from as _rd
+                    if _model is not None:
+                        for theme in themes:
+                            if not theme.get("embedding"):
+                                text = f"{theme.get('pattern_type', '')} {theme.get('statement', '')}"
+                                vec = next(iter(_model.embed([text.strip()])), None)
+                                if vec is not None:
+                                    theme["embedding"] = vec.tolist()
+                                    theme["confidence"] = _cc(
+                                        recency_days=_rd(theme.get("last_seen")),
+                                        consistency=theme.get("consistency"),
+                                        outcome_confirmation=theme.get("outcome_confirmation"),
+                                        count=int(theme.get("count", 1)),
+                                    )
+                except Exception:
+                    logger.debug("write_thinking_patterns: lazy embedding backfill skipped", exc_info=False)
+
+                profile.themes = themes
+                profile.updated_at = now
+        logger.info(
+            "write_thinking_patterns ok user=%s decision=%s count=%d",
+            user_id, decision_id, len(patterns),
+        )
+    except Exception:
+        logger.warning("write_thinking_patterns failed", exc_info=True)
+
+
+async def _write_lessons_to_pattern_profile(user_id: str, lessons: list[dict], decision_id: str, decision_category: str = "") -> None:
     try:
         from app.pattern_engine.confidence import compute_confidence, recency_days_from
         from app.pattern_engine.dedup import run_dedup
@@ -1309,7 +1503,7 @@ async def _write_lessons_to_pattern_profile(user_id: str, lessons: list[dict], d
                     "pattern_type": lesson.get("pattern_type", ""),
                     "statement": lesson.get("statement", ""),
                     "failure_mode": lesson.get("failure_type") or lesson.get("pattern_type", ""),
-                    "decision_category": lesson.get("decision_category"),
+                    "decision_category": lesson.get("decision_category") or decision_category or None,
                     "seen_in": [decision_id],
                     "count": 1,
                     "first_seen": now_iso,
@@ -1368,6 +1562,69 @@ async def get_pattern_profile(user_id: str) -> dict[str, Any]:
 async def get_weak_spots(user_id: str) -> list[dict]:
     profile = await get_pattern_profile(user_id)
     return [p for p in profile.get("patterns", []) if p.get("count", 0) >= 2]
+
+
+async def _classify_and_write_patterns(
+    user_id: str,
+    decision_id: str,
+    inputs: list[dict],
+    source: str,
+    decision_category: str,
+    clarify_draft: dict,
+    extraction_schema: dict,
+    pressure_test: dict,
+) -> None:
+    """Shared fire-and-forget helper: classify inputs → write patterns. Never raises."""
+    try:
+        from app.pattern_engine.classifier import classify_inputs_batch
+        from app.pattern_engine.profile_service import get_active_patterns
+        from app.thread_context import build_thread_context
+
+        thread_ctx = build_thread_context({
+            "clarifyDraft": clarify_draft,
+            "extractionSchema": extraction_schema,
+            "pressureTest": pressure_test,
+        })
+        existing_slugs = [
+            t["pattern_type"] for t in
+            await get_active_patterns(user_id, decision_category, min_conf=0.0)
+        ]
+        patterns = await classify_inputs_batch(
+            inputs=inputs,
+            source=source,
+            thread_context=thread_ctx,
+            existing_slugs=existing_slugs,
+        )
+        if patterns:
+            for p in patterns:
+                p["source"] = source
+            await write_thinking_patterns(user_id, decision_id, patterns, decision_category)
+    except Exception:
+        logger.warning("_classify_and_write_patterns failed source=%s", source, exc_info=True)
+
+
+async def cleanup_empty_threads(older_than_hours: int = 24) -> int:
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=older_than_hours)
+    async with get_async_session() as session:
+        count_result = await session.execute(
+            select(func.count()).select_from(Decision).where(
+                Decision.title == "Untitled Decision",
+                Decision.extraction_schema.is_(None),
+                Decision.created_at < cutoff,
+            )
+        )
+        deleted = count_result.scalar() or 0
+        if deleted:
+            await session.execute(
+                delete(Decision).where(
+                    Decision.title == "Untitled Decision",
+                    Decision.extraction_schema.is_(None),
+                    Decision.created_at < cutoff,
+                )
+            )
+        await session.commit()
+    return deleted
 
 
 # ---------------------------------------------------------------------------

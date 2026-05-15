@@ -4,6 +4,7 @@ import logging
 from fastapi import FastAPI
 from sqlalchemy import text
 
+from app.api.routes.admin import router as admin_router
 from app.api.routes.clarify_draft import router as clarify_draft_router
 from app.extraction.api import router as extraction_router
 from app.api.routes.decision_output import router as decision_output_router
@@ -57,6 +58,13 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _start_decay_scheduler()
+    try:
+        from app.storage.thread_store import cleanup_empty_threads
+        deleted = await cleanup_empty_threads(older_than_hours=24)
+        if deleted:
+            logger.info("startup cleanup: deleted %d empty threads", deleted)
+    except Exception:
+        logger.warning("startup cleanup failed — skipping", exc_info=True)
     yield
     if _scheduler is not None:
         _scheduler.shutdown(wait=False)
@@ -74,3 +82,4 @@ app.include_router(decision_output_router, prefix="/api/v1")
 app.include_router(failure_analysis_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
 app.include_router(extraction_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1/admin")

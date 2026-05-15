@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ARRAY, Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import ARRAY, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -161,3 +161,23 @@ class ExtractionMemory(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, index=True)
     embedding = Column(Vector(384), nullable=True)
     consistency_score = Column(Float, nullable=True)
+
+
+class PatternInstance(Base):
+    """Raw evidence store — one row per classified input occurrence."""
+    __tablename__ = "pattern_instances"
+    __table_args__ = (
+        UniqueConstraint("user_id", "decision_id", "slug", "raw_text_hash", name="uq_pattern_instance"),
+        Index("ix_pi_user_slug_created", "user_id", "slug", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, nullable=False, index=True)
+    decision_id = Column(String, ForeignKey("decisions.decision_id", ondelete="CASCADE"), nullable=False)
+    slug = Column(String, nullable=False)
+    statement = Column(Text, nullable=False)
+    field_type = Column(String, nullable=False)   # assumption|constraint|context|pt_answer|failure_intake
+    source = Column(String, nullable=False)       # clarify|pressure_test|failure_analysis
+    raw_text = Column(String(500), nullable=False)
+    raw_text_hash = Column(String(64), nullable=False)  # sha256[:32]
+    created_at = Column(DateTime(timezone=True), nullable=False)
