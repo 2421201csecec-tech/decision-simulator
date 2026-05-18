@@ -99,13 +99,13 @@ export function LeftPanel({
         <ChevronLeft className="w-4 h-4" />
       </button>
 
-      <h2 className="text-sm text-muted-foreground mb-4 tracking-wide">Sources</h2>
+      <h2 className="text-base text-muted-foreground mb-4 tracking-wide">Sources</h2>
 
       <nav className="space-y-6">
         {navigationData.map((section, sectionIndex) => (
           <div key={sectionIndex}>
             {section.title && (
-              <h3 className="text-xs text-muted-foreground/70 mb-2 border-b border-border/30 pb-2">
+              <h3 className="text-sm text-muted-foreground/70 mb-2 border-b border-border/30 pb-2">
                 {section.title}
               </h3>
             )}
@@ -120,7 +120,7 @@ export function LeftPanel({
                           if (thread) onFailureAnalysis?.(thread);
                         }}
                         className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors",
+                          "w-full text-left px-2 py-1.5 rounded-lg text-base transition-colors",
                           item.active
                             ? "text-foreground font-medium bg-secondary/30"
                             : "text-foreground/80 hover:bg-secondary/50"

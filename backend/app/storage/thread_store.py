@@ -38,16 +38,16 @@ from app.storage.thread_repository import (
 ThreadStatus = Literal["active", "revision", "failed", "completed"]
 
 
-async def get_grouped_threads() -> dict[str, list[dict[str, Any]]]:
-    return await _get_grouped_threads()
+async def get_grouped_threads(user_id: str) -> dict[str, list[dict[str, Any]]]:
+    return await _get_grouped_threads(user_id)
 
 
-async def create_thread(payload: dict[str, Any]) -> dict[str, Any]:
-    return await _create_thread(payload)
+async def create_thread(payload: dict[str, Any], user_id: str) -> dict[str, Any]:
+    return await _create_thread(payload, user_id)
 
 
-async def get_thread_by_id(thread_id: str) -> dict[str, Any] | None:
-    return await _get_thread_by_id(thread_id)
+async def get_thread_by_id(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _get_thread_by_id(thread_id, user_id)
 
 
 async def get_thread_context_data(thread_id: str) -> dict[str, Any] | None:
@@ -58,8 +58,8 @@ async def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str,
     return await _save_clarify_draft(thread_id, draft)
 
 
-async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
-    return await _generate_pressure_test(thread_id)
+async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _generate_pressure_test(thread_id, user_id)
 
 
 async def get_pressure_test(thread_id: str) -> dict[str, Any] | None:
@@ -67,15 +67,15 @@ async def get_pressure_test(thread_id: str) -> dict[str, Any] | None:
 
 
 async def submit_pressure_answer(
-    thread_id: str, scenario_id: int, answer: str, probe_id: str | None = None
+    thread_id: str, scenario_id: int, answer: str, probe_id: str | None = None, user_id: str = ""
 ) -> dict[str, Any] | None:
-    return await _submit_pressure_answer(thread_id, scenario_id, answer, probe_id)
+    return await _submit_pressure_answer(thread_id, scenario_id, answer, probe_id, user_id)
 
 
 async def skip_pressure_scenario(
-    thread_id: str, scenario_id: int, probe_id: str | None = None
+    thread_id: str, scenario_id: int, probe_id: str | None = None, user_id: str = ""
 ) -> dict[str, Any] | None:
-    return await _skip_pressure_scenario(thread_id, scenario_id, probe_id)
+    return await _skip_pressure_scenario(thread_id, scenario_id, probe_id, user_id)
 
 
 async def run_simulation(thread_id: str, variables: dict[str, Any]) -> dict[str, Any] | None:
@@ -106,8 +106,8 @@ async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
     return await _get_failure_analysis(thread_id)
 
 
-async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
-    return await _save_failure_analysis(thread_id, payload)
+async def save_failure_analysis(thread_id: str, payload: dict[str, Any], user_id: str = "") -> dict[str, Any] | None:
+    return await _save_failure_analysis(thread_id, payload, user_id)
 
 
 async def get_pattern_profile(user_id: str) -> dict[str, Any]:

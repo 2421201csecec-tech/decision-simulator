@@ -67,6 +67,7 @@ async def put_failure_analysis(thread_id: str, request: Request) -> JSONResponse
             "failedAssumptions": list(parsed.failedAssumptions),
             "rootCause": parsed.rootCause,
         },
+        user_id=request.state.user_id,
     )
 
     if not saved:
@@ -76,6 +77,6 @@ async def put_failure_analysis(thread_id: str, request: Request) -> JSONResponse
 
 
 @router.get("/threads/{thread_id}/pattern-profile")
-async def get_pattern_profile_route(thread_id: str) -> JSONResponse:
-    profile = await get_pattern_profile("default_user")
+async def get_pattern_profile_route(thread_id: str, request: Request) -> JSONResponse:
+    profile = await get_pattern_profile(request.state.user_id)
     return JSONResponse(profile)

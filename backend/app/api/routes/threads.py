@@ -20,8 +20,8 @@ class CreateThreadPayload(BaseModel):
 
 
 @router.get("/threads")
-async def list_threads(grouped: bool = Query(default=False)) -> JSONResponse:
-    grouped_threads = await get_grouped_threads()
+async def list_threads(request: Request, grouped: bool = Query(default=False)) -> JSONResponse:
+    grouped_threads = await get_grouped_threads(request.state.user_id)
     if grouped:
         return JSONResponse(grouped_threads)
 
@@ -60,7 +60,8 @@ async def create_threads(request: Request) -> JSONResponse:
             "title": parsed.title,
             "parentThreadId": str(parsed.parentThreadId) if parsed.parentThreadId else None,
             "status": parsed.status,
-        }
+        },
+        user_id=request.state.user_id,
     )
 
     return JSONResponse(thread, status_code=201)

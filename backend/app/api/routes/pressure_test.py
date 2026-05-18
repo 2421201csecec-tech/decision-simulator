@@ -22,9 +22,9 @@ class PreGenerateRequest(BaseModel):
 
 
 @router.post("/pressure-test/pre-generate")
-async def post_pre_generate(req: PreGenerateRequest) -> JSONResponse:
+async def post_pre_generate(req: PreGenerateRequest, request: Request) -> JSONResponse:
     """Pre-generate v2 root scenarios instantly from clarify draft (< 5s)."""
-    thread = await generate_pressure_test(req.thread_id)
+    thread = await generate_pressure_test(req.thread_id, request.state.user_id)
     if not thread:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"pressureTest": thread.get("pressureTest")})
@@ -50,8 +50,8 @@ async def get_pressure(thread_id: str) -> JSONResponse:
 
 
 @router.post("/threads/{thread_id}/pressure-test")
-async def post_pressure(thread_id: str) -> JSONResponse:
-    thread = await generate_pressure_test(thread_id)
+async def post_pressure(thread_id: str, request: Request) -> JSONResponse:
+    thread = await generate_pressure_test(thread_id, request.state.user_id)
     if not thread:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"pressureTest": thread.get("pressureTest")})
@@ -97,7 +97,8 @@ async def post_pressure_answer(thread_id: str, request: Request) -> JSONResponse
             return JSONResponse({"message": "Scenario does not match current pressure-test step"}, status_code=409)
 
     pressure_test = await submit_pressure_answer(
-        thread_id, parsed.scenarioId, parsed.answer, probe_id=parsed.probeId
+        thread_id, parsed.scenarioId, parsed.answer, probe_id=parsed.probeId,
+        user_id=request.state.user_id,
     )
     if not pressure_test:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
@@ -141,7 +142,8 @@ async def post_pressure_skip(thread_id: str, request: Request) -> JSONResponse:
             return JSONResponse({"message": "Scenario does not match current pressure-test step"}, status_code=409)
 
     pressure_test = await skip_pressure_scenario(
-        thread_id, parsed.scenarioId, probe_id=parsed.probeId
+        thread_id, parsed.scenarioId, probe_id=parsed.probeId,
+        user_id=request.state.user_id,
     )
     if not pressure_test:
         return JSONResponse({"message": "Thread not found"}, status_code=404)

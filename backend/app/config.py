@@ -36,6 +36,11 @@ class Settings:
     # Pattern Engine v2 — master kill switch (overrides all ENABLE_* flags in constants.py)
     pattern_engine_enabled: bool = os.getenv("PATTERN_ENGINE_ENABLED", "false").lower() == "true"
 
+    # Auth
+    supabase_url: str = os.getenv("SUPABASE_URL", "")
+    supabase_service_role_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 
 
 

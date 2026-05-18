@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 //This module provides utilities to proxy API requests to a core backend service. It checks if the proxy is
 //  enabled via environment variables and forwards requests accordingly, while also handling responses and errors gracefully.
@@ -64,6 +65,12 @@ export async function proxyRequestToCoreBackend(options: ProxyRequestOptions): P
     const contentType = options.request.headers.get("content-type");
     if (contentType) {
       headers.set("content-type", contentType);
+    }
+
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers.set("authorization", `Bearer ${session.access_token}`);
     }
 
     const init: RequestInit = {

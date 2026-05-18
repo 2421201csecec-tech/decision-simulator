@@ -210,6 +210,11 @@ interface ApiErrorPayload {
 }
 
 async function parseApiError(response: Response, fallbackMessage: string): Promise<never> {
+  if (response.status === 401 && typeof window !== "undefined") {
+    window.location.href = "/login";
+    throw new Error("Session expired");
+  }
+
   let message = fallbackMessage;
   try {
     const payload = (await response.json()) as ApiErrorPayload;

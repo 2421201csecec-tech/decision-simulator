@@ -29,8 +29,8 @@ class ClarifyDraftPayload(BaseModel):
 
 
 @router.get("/threads/{thread_id}/clarify-draft")
-async def get_clarify_draft(thread_id: str) -> JSONResponse:
-    thread = await get_thread_by_id(thread_id)
+async def get_clarify_draft(thread_id: str, request: Request) -> JSONResponse:
+    thread = await get_thread_by_id(thread_id, request.state.user_id)
     if not thread:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
 
@@ -89,8 +89,9 @@ async def put_clarify_draft(thread_id: str, request: Request) -> JSONResponse:
 # It can be moved later if needed.
 
 @router.post("/threads/{thread_id}/extract")
-async def post_extract(thread_id: str) -> JSONResponse:
-    thread = await get_thread_by_id(thread_id)
+async def post_extract(thread_id: str, request: Request) -> JSONResponse:
+    user_id = request.state.user_id
+    thread = await get_thread_by_id(thread_id, user_id)
     if not thread:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
 
@@ -99,7 +100,7 @@ async def post_extract(thread_id: str) -> JSONResponse:
         return JSONResponse({"message": "Clarify draft is empty"}, status_code=400)
 
     user_input = compose_draft_input(clarify_draft)
-    result = await run_extraction(user_input)
+    result = await run_extraction(user_input, user_id=user_id)
 
     if result.get("status") == "clarification_needed":
         return JSONResponse({"message": "Clarification needed", "detail": result}, status_code=409)
@@ -109,7 +110,7 @@ async def post_extract(thread_id: str) -> JSONResponse:
     # Fire-and-forget: classify clarify draft fields as behavioral patterns
     decision_category = result.get("decision_category") or ""
     if decision_category:
-        asyncio.create_task(_classify_clarify_draft(thread_id, clarify_draft, decision_category, result))
+        asyncio.create_task(_classify_clarify_draft(thread_id, clarify_draft, decision_category, result, user_id))
 
     return JSONResponse({"extractionSchema": result})
 
@@ -119,6 +120,7 @@ async def _classify_clarify_draft(
     clarify_draft: dict,
     decision_category: str,
     extraction_schema: dict,
+    user_id: str = "",
 ) -> None:
     """Collect all clarify draft fields and send to behavioral pattern classifier."""
     try:
@@ -157,7 +159,7 @@ async def _classify_clarify_draft(
 
         if inputs:
             await _classify_and_write_patterns(
-                user_id="default_user",
+                user_id=user_id,
                 decision_id=thread_id,
                 inputs=inputs,
                 source="clarify",

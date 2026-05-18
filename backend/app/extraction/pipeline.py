@@ -216,7 +216,7 @@ async def run_extraction(
     user_input: str,
     session_id: str | None = None,
     clarification_answer: str | None = None,
-    user_id: str = "default_user",
+    user_id: str = "",
     decision_id: str | None = None,
     category_hint: str | None = None,
 ) -> dict:

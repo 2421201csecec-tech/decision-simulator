@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -15,7 +15,6 @@ router = APIRouter()
 class SimulateRequest(BaseModel):
     extraction_schema: dict
     user_values: dict[str, float] = {}
-    user_id: str = "default_user"
     thread_id: str | None = None
 
 
@@ -27,7 +26,7 @@ class ScoreRequest(BaseModel):
 
 
 @router.post("/simulate")
-async def post_simulate(req: SimulateRequest) -> JSONResponse:
+async def post_simulate(req: SimulateRequest, request: Request) -> JSONResponse:
     """Monte Carlo simulation. Returns distributions + sensitivity analysis. No LLM call."""
     from app.pattern_engine.capabilities import get_capabilities
     from app.pattern_engine.lambda_adjuster import compute_adjusted_lambdas
@@ -37,7 +36,7 @@ async def post_simulate(req: SimulateRequest) -> JSONResponse:
         return JSONResponse({"message": "Insufficient schema to simulate"}, status_code=422)
 
     category = req.extraction_schema.get("decision_category") or ""
-    caps = await get_capabilities(req.user_id, category)
+    caps = await get_capabilities(request.state.user_id, category)
 
     lambda_base = {"lambda1": 0.30, "lambda2": 0.40, "lambda3": 0.10, "lambda4": 0.20}
     lambda_adjusted = None

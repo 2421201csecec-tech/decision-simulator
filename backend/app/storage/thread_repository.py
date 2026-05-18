@@ -145,10 +145,10 @@ def _create_default_pressure_state() -> dict[str, Any]:
 # Threads
 # ---------------------------------------------------------------------------
 
-async def get_grouped_threads() -> dict[str, list[dict[str, Any]]]:
+async def get_grouped_threads(user_id: str) -> dict[str, list[dict[str, Any]]]:
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision).order_by(Decision.created_at.desc())
+            select(Decision).where(Decision.user_id == user_id).order_by(Decision.created_at.desc())
         )
         decisions = result.scalars().all()
         grouped: dict[str, list[dict[str, Any]]] = {
@@ -171,7 +171,7 @@ async def get_grouped_threads() -> dict[str, list[dict[str, Any]]]:
         return grouped
 
 
-async def create_thread(payload: dict[str, Any]) -> dict[str, Any]:
+async def create_thread(payload: dict[str, Any], user_id: str) -> dict[str, Any]:
     now = _now()
     parent_thread_id = payload.get("parentThreadId")
     status = payload.get("status") or ("revision" if parent_thread_id else "active")
@@ -184,6 +184,7 @@ async def create_thread(payload: dict[str, Any]) -> dict[str, Any]:
         parent_decision_id=parent_thread_id,
         created_at=now,
         updated_at=now,
+        user_id=user_id,
         clarify_draft={
             "title": title,
             "coreProblem": "",
@@ -214,7 +215,7 @@ async def get_thread_context_data(thread_id: str) -> dict[str, Any] | None:
         return {"clarifyDraft": row[0] or {}, "pressureTest": row[1] or {}}
 
 
-async def get_thread_by_id(thread_id: str) -> dict[str, Any] | None:
+async def get_thread_by_id(thread_id: str, user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         result = await session.execute(
             select(Decision)
@@ -222,7 +223,7 @@ async def get_thread_by_id(thread_id: str) -> dict[str, Any] | None:
                 selectinload(Decision.simulation_runs),
                 selectinload(Decision.failure_analysis),
             )
-            .where(Decision.decision_id == thread_id)
+            .where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         decision = result.scalar_one_or_none()
         if decision is None:
@@ -487,7 +488,7 @@ def _all_roots_closed(root_scenarios: list[dict]) -> bool:
 # Pressure test — public API
 # ---------------------------------------------------------------------------
 
-async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
+async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any] | None:
     from app.pressure_test.generator import pre_generate_roots
 
     async with get_async_session() as session:
@@ -501,7 +502,7 @@ async def generate_pressure_test(thread_id: str) -> dict[str, Any] | None:
         clarify_draft = decision.clarify_draft or {}
 
         if decision.pressure_test is None:
-            weak_spots = await get_weak_spots("default_user")
+            weak_spots = await get_weak_spots(user_id)
             ai_roots = await pre_generate_roots(clarify_draft, weak_spots=weak_spots or None)
             state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else _create_default_pressure_state()
             decision.pressure_test = state
@@ -600,6 +601,7 @@ async def _submit_pressure_answer_v2(
     root_id: int,
     answer: str,
     probe_id: str | None = None,
+    user_id: str = "",
 ) -> dict[str, Any] | None:
     """v2 answer flow: evaluator-driven, conditional probe generation, root status transitions."""
     from app.pressure_test.evaluator import evaluate_answer
@@ -702,7 +704,7 @@ async def _submit_pressure_answer_v2(
         answer_text = probe["answer"] if probe_id else root.get("answer", "")
         if answer_text and answer_text.strip():
             asyncio.create_task(_classify_and_write_patterns(
-                user_id="default_user",
+                user_id=user_id,
                 decision_id=thread_id,
                 inputs=[{"index": 0, "field_type": "pt_answer", "text": answer_text[:500]}],
                 source="pressure_test",
@@ -720,10 +722,11 @@ async def submit_pressure_answer(
     scenario_id: int,
     answer: str,
     probe_id: str | None = None,
+    user_id: str = "",
 ) -> dict[str, Any] | None:
     pt = await get_pressure_test(thread_id)
     if pt and "rootScenarios" in pt:
-        return await _submit_pressure_answer_v2(thread_id, scenario_id, answer, probe_id)
+        return await _submit_pressure_answer_v2(thread_id, scenario_id, answer, probe_id, user_id)
     return await _advance_pressure_scenario(
         thread_id,
         scenario_id,
@@ -735,6 +738,7 @@ async def skip_pressure_scenario(
     thread_id: str,
     scenario_id: int,
     probe_id: str | None = None,
+    user_id: str = "",
 ) -> dict[str, Any] | None:
     pt = await get_pressure_test(thread_id)
     if pt and "rootScenarios" in pt:
@@ -1181,7 +1185,7 @@ async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
         return _fa_to_dict(fa)
 
 
-async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+async def save_failure_analysis(thread_id: str, payload: dict[str, Any], user_id: str = "") -> dict[str, Any] | None:
     from app.failure.analyzer import analyze_gaps, extract_lessons
 
     async with get_async_session() as session:
@@ -1202,7 +1206,7 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
 
         # LLM gap analysis — falls back gracefully on failure
         gap_result = await analyze_gaps(snapshot, payload)
-        existing_patterns = await _get_pattern_list("default_user", session)
+        existing_patterns = await _get_pattern_list(user_id, session)
         lessons = await extract_lessons(gap_result or {}, existing_patterns)
 
         now = _now()
@@ -1250,7 +1254,7 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
 
         # Write lessons to pattern profile (fire-and-forget — does not block response)
         if lessons:
-            asyncio.create_task(_write_lessons_to_pattern_profile("default_user", lessons, thread_id, decision_category))
+            asyncio.create_task(_write_lessons_to_pattern_profile(user_id, lessons, thread_id, decision_category))
 
         # Classify raw failure intake answers as behavioral patterns (fire-and-forget)
         intake_inputs = [
@@ -1265,7 +1269,7 @@ async def save_failure_analysis(thread_id: str, payload: dict[str, Any]) -> dict
         ]
         if intake_inputs:
             asyncio.create_task(_classify_and_write_patterns(
-                user_id="default_user",
+                user_id=user_id,
                 decision_id=thread_id,
                 inputs=intake_inputs,
                 source="failure_analysis",

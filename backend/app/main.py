@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 import logging
+import os
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes.admin import router as admin_router
@@ -14,6 +16,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.pressure_test import router as pressure_test_router
 from app.api.routes.simulation import router as simulation_router
 from app.api.routes.threads import router as threads_router
+from app.api.routes.user import router as user_router
 from app.config import settings
 from app.db.engine import engine, get_async_session
 from app.logging_config import configure_logging
@@ -72,7 +75,17 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI app and include all routers
 
+from app.middleware.auth import JWTAuthMiddleware
+
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app.add_middleware(JWTAuthMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(threads_router, prefix="/api/v1")
 app.include_router(clarify_draft_router, prefix="/api/v1")
@@ -83,3 +96,4 @@ app.include_router(failure_analysis_router, prefix="/api/v1")
 app.include_router(export_router, prefix="/api/v1")
 app.include_router(extraction_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1/admin")
+app.include_router(user_router, prefix="/api/v1")

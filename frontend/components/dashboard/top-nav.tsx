@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client";
 
 interface TopNavProps {
   onLogoClick?: () => void;
@@ -49,15 +51,23 @@ function EidozLogo({ className = "" }: { className?: string }) {
 }
 
 export function TopNav({ onLogoClick }: TopNavProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-background border-b border-border/50">
-      <div className="flex items-center justify-between h-full px-6">
+      <div className="flex items-center justify-between h-full px-10">
         {/* Left: Logo and Brand */}
         <button
           onClick={onLogoClick}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
-          <EidozLogo className="w-8 h-8" />
+          <EidozLogo className="w-9 h-9" />
           <span className="text-foreground tracking-[0.3em] text-sm font-medium">
             EIDOZ
           </span>
@@ -82,12 +92,18 @@ export function TopNav({ onLogoClick }: TopNavProps) {
               align="end"
               className="w-48 bg-card border-border"
             >
-              <DropdownMenuItem className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary">
+              <DropdownMenuItem
+                className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary"
+                onClick={() => router.push('/settings')}
+              >
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary">
+              <DropdownMenuItem
+                className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary"
+                onClick={handleLogout}
+              >
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </DropdownMenuItem>
