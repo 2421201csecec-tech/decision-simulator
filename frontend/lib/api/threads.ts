@@ -145,11 +145,11 @@ export interface SimulationRun {
 export interface ExtractionVariable {
   variable_id: string;
   name: string;
-  type: "continuous" | "ordinal" | "categorical" | "boolean";
+  type: "continuous" | "ordinal" | "categorical" | "boolean" | "discrete";
   range?: [number, number];
   possible_values?: string[];
   importance: "critical" | "high" | "medium" | "low";
-  direction: "maximize" | "minimize";
+  direction?: "maximize" | "minimize" | null;
   extraction_confidence: number;
   unit?: string;
 }

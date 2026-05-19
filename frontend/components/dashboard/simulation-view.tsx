@@ -569,7 +569,7 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
         if (!active) return;
         setLatestRun(run);
         const vars: ExtractionVariable[] = ((extractionSchema?.variables ?? []) as ExtractionVariable[]).filter(
-          (v) => ["continuous", "ordinal", "categorical", "boolean"].includes(v.type)
+          (v) => ["continuous", "ordinal", "categorical", "boolean", "discrete"].includes(v.type)
         );
         setVariables(vars);
         const defaults: Record<string, number> = {};

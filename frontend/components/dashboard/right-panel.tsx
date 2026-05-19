@@ -108,7 +108,7 @@ function TickerHeader() {
       <div className="h-5 overflow-hidden flex items-center" style={{ perspective: "300px" }}>
         <span
           className={`whitespace-nowrap block ${
-            isTask ? "text-sm text-muted-foreground" : "text-base font-medium text-foreground"
+            isTask ? "text-xs text-muted-foreground" : "text-sm font-medium text-foreground"
           } ${animClass}`}
         >
           {displayText}
@@ -138,13 +138,13 @@ function InsightBlock({
 }) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{title}</h3>
+      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</h3>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground/50 italic">{emptyText}</p>
+        <p className="text-xs text-muted-foreground/50 italic">{emptyText}</p>
       ) : (
         <ul className="space-y-1.5">
           {items.map((item, i) => (
-            <li key={i} className="text-base text-foreground/80 flex gap-2 leading-snug">
+            <li key={i} className="text-sm text-foreground/80 flex gap-2 leading-snug">
               <span className="text-accent shrink-0 mt-0.5">•</span>
               <span>{item}</span>
             </li>
@@ -196,7 +196,7 @@ function ConfidenceGauge({ value }: { value: number }) {
           </text>
         </svg>
         <div>
-          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="text-xs font-medium text-foreground">{label}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{subLabel}</p>
         </div>
       </div>
@@ -398,7 +398,7 @@ export function RightPanel({
       {/* No thread selected */}
       {!hasThread && (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground/40 text-base text-center italic">
+          <p className="text-muted-foreground/40 text-sm text-center italic">
             Start or select a decision to see insights
           </p>
         </div>

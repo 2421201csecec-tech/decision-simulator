@@ -194,7 +194,19 @@ export default function Dashboard() {
 
   const handleSubmitFinal = useCallback(() => {
     setView("decision-output");
-  }, []);
+    if (selectedThreadId) {
+      // Fetch extraction schema immediately (runs during clarify, may not be in state yet)
+      fetchSimulationState(selectedThreadId).then(({ extractionSchema: schema }) => {
+        if (schema) setExtractionSchema(schema);
+      }).catch(() => {});
+      // Synthesis runs as a background task — re-fetch after delay to pick it up
+      window.setTimeout(() => {
+        fetchPressureTest(selectedThreadId).then((state) => {
+          if (state?.summary) setPressureTestState(state);
+        }).catch(() => {});
+      }, 4000);
+    }
+  }, [selectedThreadId]);
 
   const handleRunSimulation = () => {
     setView("simulation");

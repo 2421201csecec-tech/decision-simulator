@@ -262,70 +262,91 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
       )}
 
       {/* Form */}
-      <div className="flex-1 space-y-6 max-w-2xl mx-auto w-full">
+      <div className="flex-1 space-y-7 max-w-2xl mx-auto w-full">
         {/* Decision Title */}
         <div className="space-y-2">
-          <label className="text-sm text-foreground">Decision Title</label>
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Decision Title</label>
           <div className="relative">
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 150))}
-              placeholder="Decision Title"
-              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 transition-all"
+              placeholder="What are you deciding?"
+              className="w-full rounded-xl px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none transition-all"
+              style={{ background: 'var(--secondary)', border: '1px solid var(--border)' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-              {title.length} / 150
-            </span>
+            {title.length > 0 && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                {title.length}/150
+              </span>
+            )}
           </div>
         </div>
 
         {/* Core Problem */}
         <div className="space-y-2">
-          <label className="text-sm text-foreground">What is the core problem?</label>
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Core Problem</label>
           <div className="relative">
             <textarea
               value={coreProblem}
               onChange={(e) => setCoreProblem(e.target.value.slice(0, 500))}
-              placeholder="What outcome do you want?"
-              rows={2}
-              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
+              placeholder="What's really going on here?"
+              rows={3}
+              className="w-full rounded-xl px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none resize-none transition-all"
+              style={{ background: 'var(--secondary)', border: '1px solid var(--border)' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
-            <span className="absolute right-3 bottom-3 text-xs text-muted-foreground">
-              {coreProblem.length} / 500
-            </span>
+            {coreProblem.length > 0 && (
+              <span className="absolute right-3 bottom-3 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                {coreProblem.length}/500
+              </span>
+            )}
           </div>
         </div>
 
         {/* Context */}
         <div className="space-y-2">
-          <label className="text-sm text-foreground">Context</label>
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>
+            Context <span className="normal-case tracking-normal font-normal ml-1" style={{ color: 'var(--muted-foreground)', opacity: 0.6 }}>· optional</span>
+          </label>
           <div className="relative">
             <textarea
               value={context}
               onChange={(e) => setContext(e.target.value.slice(0, 500))}
-              placeholder="(Optional)"
-              rows={2}
-              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
+              placeholder="Any background that shapes this decision…"
+              rows={3}
+              className="w-full rounded-xl px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none resize-none transition-all"
+              style={{ background: 'var(--secondary)', border: '1px solid var(--border)' }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
             />
-            <span className="absolute right-3 bottom-3 text-xs text-muted-foreground">
-              {context.length} / 500 · Optional
-            </span>
+            {context.length > 0 && (
+              <span className="absolute right-3 bottom-3 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                {context.length}/500
+              </span>
+            )}
           </div>
         </div>
 
         {/* Constraints */}
         <div className="space-y-2">
-          <label className="text-sm text-foreground">Constraints</label>
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Constraints</label>
           {constraints.map((constraint, index) => (
             <div
               key={index}
-              className="bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground text-sm flex items-center justify-between group"
+              className="rounded-xl px-4 py-3 text-base flex items-center justify-between group transition-all"
+              style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
             >
               <span>{constraint}</span>
               <button
                 onClick={() => handleRemoveConstraint(index)}
-                className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                className="p-1 transition-colors opacity-0 group-hover:opacity-100"
+                style={{ color: 'var(--muted-foreground)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -339,54 +360,48 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
                 onChange={(e) => setNewConstraint(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleAddConstraint();
-                  if (e.key === "Escape") {
-                    setShowConstraintInput(false);
-                    setNewConstraint("");
-                  }
+                  if (e.key === "Escape") { setShowConstraintInput(false); setNewConstraint(""); }
                 }}
-                placeholder="Enter constraint..."
+                placeholder="e.g. Budget under ₹5L…"
                 autoFocus
-                className="flex-1 bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 transition-all"
+                className="flex-1 rounded-xl px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none transition-all"
+                style={{ background: 'var(--secondary)', border: '1px solid var(--accent)' }}
               />
-              <button
-                onClick={handleAddConstraint}
-                className="px-4 py-2 bg-accent text-accent-foreground rounded-lg text-sm hover:bg-accent/90 transition-colors"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => {
-                  setShowConstraintInput(false);
-                  setNewConstraint("");
-                }}
-                className="px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={handleAddConstraint} className="px-4 py-2 rounded-xl text-sm font-medium transition-colors" style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}>Add</button>
+              <button onClick={() => { setShowConstraintInput(false); setNewConstraint(""); }} className="px-3 py-2 transition-colors" style={{ color: 'var(--muted-foreground)' }}>
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setShowConstraintInput(true)}
-              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-accent flex items-center gap-2 hover:bg-secondary transition-colors"
+              className="w-full rounded-xl px-4 py-3 text-sm flex items-center gap-2 transition-colors"
+              style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--muted-foreground)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
             >
               <Plus className="w-4 h-4" />
-              <span>Add Constraint</span>
+              <span>Add a constraint</span>
             </button>
           )}
         </div>
 
         {/* Assumptions */}
         <div className="space-y-2">
-          <label className="text-sm text-foreground">Assumptions</label>
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Assumptions</label>
           {assumptions.map((assumption, index) => (
             <div
               key={index}
-              className="bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground text-sm flex items-center justify-between group"
+              className="rounded-xl px-4 py-3 text-base flex items-center justify-between group transition-all"
+              style={{ background: 'var(--secondary)', border: '1px solid var(--border)', color: 'var(--foreground)' }}
             >
               <span>{assumption}</span>
               <button
                 onClick={() => handleRemoveAssumption(index)}
-                className="p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                className="p-1 transition-colors opacity-0 group-hover:opacity-100"
+                style={{ color: 'var(--muted-foreground)' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -400,38 +415,28 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
                 onChange={(e) => setNewAssumption(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleAddAssumption();
-                  if (e.key === "Escape") {
-                    setShowAssumptionInput(false);
-                    setNewAssumption("");
-                  }
+                  if (e.key === "Escape") { setShowAssumptionInput(false); setNewAssumption(""); }
                 }}
-                placeholder="Enter assumption..."
+                placeholder="e.g. Users will pay for this…"
                 autoFocus
-                className="flex-1 bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 transition-all"
+                className="flex-1 rounded-xl px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none transition-all"
+                style={{ background: 'var(--secondary)', border: '1px solid var(--accent)' }}
               />
-              <button
-                onClick={handleAddAssumption}
-                className="px-4 py-2 bg-accent text-accent-foreground rounded-lg text-sm hover:bg-accent/90 transition-colors"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => {
-                  setShowAssumptionInput(false);
-                  setNewAssumption("");
-                }}
-                className="px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={handleAddAssumption} className="px-4 py-2 rounded-xl text-sm font-medium transition-colors" style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}>Add</button>
+              <button onClick={() => { setShowAssumptionInput(false); setNewAssumption(""); }} className="px-3 py-2 transition-colors" style={{ color: 'var(--muted-foreground)' }}>
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setShowAssumptionInput(true)}
-              className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-3 text-accent flex items-center gap-2 hover:bg-secondary transition-colors"
+              className="w-full rounded-xl px-4 py-3 text-sm flex items-center gap-2 transition-colors"
+              style={{ background: 'transparent', border: '1px dashed var(--border)', color: 'var(--muted-foreground)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
             >
               <Plus className="w-4 h-4" />
-              <span>Add Assumption</span>
+              <span>Add an assumption</span>
             </button>
           )}
         </div>
@@ -442,13 +447,12 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
             onClick={() => {
               if (threadId && !preGeneratedRef.current) {
                 preGeneratedRef.current = true;
-                generatePressureTest(threadId).catch(() => {
-                  preGeneratedRef.current = false;
-                });
+                generatePressureTest(threadId).catch(() => { preGeneratedRef.current = false; });
               }
               onContinue(draftPayload);
             }}
-            className="px-6 py-2.5 bg-accent text-accent-foreground rounded-full text-sm font-medium hover:bg-accent/90 transition-colors flex items-center gap-2 shadow-lg shadow-accent/20"
+            className="px-6 py-2.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2"
+            style={{ background: 'var(--accent)', color: 'var(--accent-foreground)', boxShadow: '0 4px 20px color-mix(in srgb, var(--accent) 25%, transparent)' }}
           >
             Continue
             <ArrowRight className="w-4 h-4" />

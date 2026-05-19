@@ -4,18 +4,22 @@ import {
   runExtractionSimulation,
   runSimulation,
 } from "@/lib/server/thread-store";
-import { isCoreBackendProxyEnabled } from "@/lib/server/core-backend-proxy";
+import { isCoreBackendProxyEnabled, proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
+import { createClient } from "@/lib/supabase/server";
+
 interface Params {
   params: Promise<{ threadId: string }>;
 }
 
 const BACKEND_URL = process.env.CORE_BACKEND_URL?.replace(/\/$/, "") ?? "";
 
-async function callBackend(path: string, body: unknown): Promise<unknown | null> {
+async function callBackend(path: string, body: unknown, accessToken?: string): Promise<unknown | null> {
   try {
+    const headers: HeadersInit = { "content-type": "application/json" };
+    if (accessToken) headers["authorization"] = `Bearer ${accessToken}`;
     const res = await fetch(`${BACKEND_URL}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify(body),
       cache: "no-store",
     });
@@ -26,11 +30,16 @@ async function callBackend(path: string, body: unknown): Promise<unknown | null>
   }
 }
 
-async function fetchBackendSimulationState(threadId: string): Promise<Record<string, unknown> | null> {
+async function fetchBackendSimulationState(threadId: string, accessToken?: string): Promise<Record<string, unknown> | null> {
   if (!BACKEND_URL) return null;
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, { cache: "no-store" });
+    const headers: HeadersInit = {};
+    if (accessToken) headers["authorization"] = `Bearer ${accessToken}`;
+    const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, {
+      cache: "no-store",
+      headers,
+    });
     if (!res.ok) return null;
     return (await res.json()) as Record<string, unknown>;
   } catch {
@@ -38,17 +47,15 @@ async function fetchBackendSimulationState(threadId: string): Promise<Record<str
   }
 }
 
-export async function GET(_: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, { params }: Params) {
   const { threadId } = await params;
 
-  if (BACKEND_URL && isCoreBackendProxyEnabled()) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, { cache: "no-store" });
-      if (res.ok) return NextResponse.json(await res.json());
-    } catch {
-      // fall through to local store
-    }
-  }
+  const proxied = await proxyRequestToCoreBackend({
+    request,
+    path: `/api/v1/threads/${threadId}/simulation`,
+    method: "GET",
+  });
+  if (proxied) return proxied;
 
   const thread = await getThreadById(threadId);
   if (!thread) {
@@ -64,11 +71,15 @@ export async function POST(request: NextRequest, { params }: Params) {
   const userValues = (body?.user_values ?? {}) as Record<string, number>;
 
   if (BACKEND_URL && isCoreBackendProxyEnabled()) {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+
     const thread = await getThreadById(threadId);
     let extractionSchema = thread?.extractionSchema ?? null;
 
     if (!extractionSchema) {
-      const backendState = await fetchBackendSimulationState(threadId);
+      const backendState = await fetchBackendSimulationState(threadId, accessToken);
       extractionSchema = (backendState?.extractionSchema as Record<string, unknown> | null) ?? null;
     }
 
@@ -77,7 +88,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       const simResult = await callBackend("/api/v1/simulate", {
         extraction_schema: extractionSchema,
         user_values: userValues,
-      }) as Record<string, unknown> | null;
+      }, accessToken) as Record<string, unknown> | null;
 
       if (simResult?.options) {
         // Step 2: LLM explanation — pass thread_id so backend can inject session context
@@ -86,7 +97,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           simulation: simResult,
           user_values: userValues,
           thread_id: threadId,
-        }) as Record<string, unknown> | null;
+        }, accessToken) as Record<string, unknown> | null;
 
         const fullResult = scored ?? simResult;
 

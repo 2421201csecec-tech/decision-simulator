@@ -30,9 +30,14 @@ export async function GET(_: NextRequest, { params }: Params) {
   const backendUrl = process.env.CORE_BACKEND_URL?.replace(/\/$/, "");
   if (backendUrl && isCoreBackendProxyEnabled() && thread.extractionSchema && thread.pressureTest?.completed) {
     try {
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabase = await createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders: HeadersInit = { "Content-Type": "application/json" };
+      if (session?.access_token) authHeaders["authorization"] = `Bearer ${session.access_token}`;
       const res = await fetch(`${backendUrl}/api/v1/decision-output/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({
           extraction_schema: thread.extractionSchema,
           pressure_test: thread.pressureTest,
