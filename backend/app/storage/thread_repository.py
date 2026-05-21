@@ -951,11 +951,53 @@ async def get_latest_simulation(thread_id: str) -> dict[str, Any] | None:
         run = result.scalar_one_or_none()
         if run is None:
             return None
+        results = run.results or {}
+        if "options" in results:
+            return {
+                "id": run.id,
+                "options": results.get("options"),
+                "confidence": results.get("confidence"),
+                "winner_id": results.get("winner_id"),
+                "key_variable_id": results.get("key_variable_id"),
+                "explanation": results.get("explanation"),
+                "createdAt": _format_dt(run.created_at),
+            }
         return {
             "id": run.id,
             "variables": run.variables,
-            "results": run.results,
+            "results": results,
             "createdAt": _format_dt(run.created_at),
+        }
+
+
+async def save_v2_simulation(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    async with get_async_session() as session:
+        check = await session.execute(
+            select(Decision.decision_id).where(Decision.decision_id == thread_id)
+        )
+        if check.scalar_one_or_none() is None:
+            return None
+        now = _now()
+        run = SimulationRun(
+            id=str(uuid4()),
+            decision_id=thread_id,
+            variables={},
+            results=payload,
+            created_at=now,
+        )
+        session.add(run)
+        await session.execute(
+            sa_update(Decision).where(Decision.decision_id == thread_id).values(updated_at=now)
+        )
+        await session.commit()
+        return {
+            "id": run.id,
+            "options": payload.get("options"),
+            "confidence": payload.get("confidence"),
+            "winner_id": payload.get("winner_id"),
+            "key_variable_id": payload.get("key_variable_id"),
+            "explanation": payload.get("explanation"),
+            "createdAt": _format_dt(now),
         }
 
 

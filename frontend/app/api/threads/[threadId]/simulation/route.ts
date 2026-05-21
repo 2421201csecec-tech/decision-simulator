@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getThreadById,
-  runExtractionSimulation,
   runSimulation,
 } from "@/lib/server/thread-store";
 import { isCoreBackendProxyEnabled, proxyRequestToCoreBackend } from "@/lib/server/core-backend-proxy";
@@ -99,21 +98,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           thread_id: threadId,
         }, accessToken) as Record<string, unknown> | null;
 
-        const fullResult = scored ?? simResult;
-
-        const run = await runExtractionSimulation(threadId, {
-          options: fullResult.options as never,
-          confidence: fullResult.confidence as number | undefined,
-          winner_id: fullResult.winner_id as string | null | undefined,
-          key_variable_id: fullResult.key_variable_id as string | null | undefined,
-          explanation: fullResult.explanation as never,
-        });
-
-        if (run) {
-          return NextResponse.json({ run }, { status: 201 });
-        }
-
-        return NextResponse.json({ run: fullResult }, { status: 201 });
+        return NextResponse.json({ run: scored ?? simResult }, { status: 201 });
       }
     }
   }

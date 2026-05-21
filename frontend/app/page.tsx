@@ -22,7 +22,7 @@ import {
   type ThreadRecord,
 } from "@/lib/api/threads";
 
-type ViewState = "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
+type ViewState = "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis" | "decision-card";
 
 interface DecisionData {
   title: string;
@@ -107,7 +107,10 @@ export default function Dashboard() {
   };
 
   const handleBack = () => {
-    if (view === "simulation") {
+    if (view === "decision-card") {
+      setView("decision-output");
+      setRightCollapsed(false);
+    } else if (view === "simulation") {
       setView("decision-output");
       setRightCollapsed(false);
     } else if (view === "failure-analysis") {
@@ -213,6 +216,11 @@ export default function Dashboard() {
     setRightCollapsed(true);
   };
 
+  const handleViewDecisionCard = () => {
+    setView("decision-card");
+    setRightCollapsed(true);
+  };
+
   const handleStartRevision = () => {
     setView("clarify");
   };
@@ -310,6 +318,7 @@ export default function Dashboard() {
             onSubmitFinal={handleSubmitFinal}
             onRunSimulation={handleRunSimulation}
             onStartRevision={handleStartRevision}
+            onViewDecisionCard={handleViewDecisionCard}
             onRebuildDecision={handleRebuildDecision}
             decisionData={decisionData}
             selectedFailedDecision={selectedFailedDecision}

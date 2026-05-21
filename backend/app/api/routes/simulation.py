@@ -7,9 +7,14 @@ from pydantic import BaseModel
 from app.simulation.aggregator import build_results
 from app.simulation.explainer import generate_explanation
 from app.simulation.monte_carlo import run_monte_carlo, run_sensitivity
-from app.storage.thread_store import get_latest_simulation, get_simulation_history
+from app.storage.thread_store import get_latest_simulation, get_simulation_history, save_v2_simulation
 
 router = APIRouter()
+
+
+class LabelRequest(BaseModel):
+    items: list[str]
+    count: int = 3
 
 
 class SimulateRequest(BaseModel):
@@ -101,13 +106,25 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
         user_values=req.user_values,
         thread_context=thread_context,
     )
-    return JSONResponse({
-        **req.simulation,
-        "explanation": explanation,
-    })
+    result = {**req.simulation, "explanation": explanation}
+
+    if req.thread_id:
+        import asyncio
+        asyncio.create_task(save_v2_simulation(req.thread_id, result))
+
+    return JSONResponse(result)
 # The following endpoints fetch past simulation runs for a thread.
 # The frontend currently only uses the latest run endpoint, but the history endpoint 
 # is available for debugging and potential future features.
+
+@router.post("/threads/{thread_id}/simulation/save")
+async def save_simulation_v2(thread_id: str, request: Request) -> JSONResponse:
+    body = await request.json()
+    run = await save_v2_simulation(thread_id, body)
+    if run is None:
+        return JSONResponse({"message": "Thread not found"}, status_code=404)
+    return JSONResponse({"run": run}, status_code=201)
+
 
 @router.get("/threads/{thread_id}/simulation")
 async def get_simulation(thread_id: str) -> JSONResponse:
@@ -117,6 +134,42 @@ async def get_simulation(thread_id: str) -> JSONResponse:
     if run is None and extraction_schema is None:
         return JSONResponse({"message": "Simulation run not found"}, status_code=404)
     return JSONResponse({"run": run, "extractionSchema": extraction_schema})
+
+@router.post("/summarize-labels")
+async def summarize_labels(req: LabelRequest) -> JSONResponse:
+    """Generate 2-3 word labels for a list of sentences via LLM."""
+    from app.extraction.passes.llm_client import call_llm
+    import json
+
+    if not req.items:
+        return JSONResponse({"labels": []})
+
+    numbered = "\n".join(f"{i+1}. {item}" for i, item in enumerate(req.items))
+    prompt = (
+        "Return ONLY valid JSON — no markdown, no text outside the JSON.\n\n"
+        f"You are given {len(req.items)} point(s) below. Generate exactly {req.count} labels total.\n"
+        "Each label must be 2-3 words capturing a specific, concrete idea.\n"
+        f"- Label the given points first (in order).\n"
+        f"- If fewer than {req.count} points are provided, infer the remaining labels "
+        "from the context and theme of the existing points — do not leave blanks.\n"
+        "Be specific. Avoid generic words like 'issue', 'problem', 'factor', 'aspect'.\n\n"
+        f"Points:\n{numbered}\n\n"
+        f"Return exactly: {{\"labels\": [\"label1\", \"label2\", ...]}} with exactly {req.count} labels."
+    )
+
+    try:
+        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=200)
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        parsed = json.loads(raw.strip())
+        labels = parsed.get("labels", req.items)
+        return JSONResponse({"labels": labels})
+    except Exception:
+        return JSONResponse({"labels": req.items})
+
 
 #this endpoint is not currently used by the frontend but is available for debugging and future features like showing past runs
 

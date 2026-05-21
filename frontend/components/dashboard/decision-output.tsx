@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, TrendingUp, AlertTriangle, FlaskConical, Lock, RotateCcw, CheckCircle2, ShieldAlert } from "lucide-react";
+import { ChevronLeft, TrendingUp, AlertTriangle, FlaskConical, Lock, RotateCcw, CheckCircle2, ShieldAlert, LayoutTemplate } from "lucide-react";
 import { fetchDecisionOutput, type DecisionOutputData } from "@/lib/api/threads";
 
 interface DecisionOutputProps {
@@ -9,6 +9,7 @@ interface DecisionOutputProps {
   onBack: () => void;
   onRunSimulation: () => void;
   onStartRevision: () => void;
+  onViewDecisionCard: () => void;
 }
 
 const STRENGTH_ZONES = [
@@ -61,7 +62,7 @@ function StrengthSpectrum({ value }: { value: number }) {
   );
 }
 
-export function DecisionOutput({ threadId, onBack, onRunSimulation, onStartRevision }: DecisionOutputProps) {
+export function DecisionOutput({ threadId, onBack, onRunSimulation, onStartRevision, onViewDecisionCard }: DecisionOutputProps) {
   const [output, setOutput] = useState<DecisionOutputData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -272,6 +273,16 @@ export function DecisionOutput({ threadId, onBack, onRunSimulation, onStartRevis
           >
             <RotateCcw className="w-4 h-4" />
             Start Revision
+          </button>
+          <button
+            onClick={onViewDecisionCard}
+            className="flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-medium transition-colors"
+            style={{ background: 'rgba(201,184,150,0.08)', borderColor: 'rgba(201,184,150,0.3)', color: '#c9b896' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(201,184,150,0.14)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(201,184,150,0.08)')}
+          >
+            <LayoutTemplate className="w-4 h-4" />
+            Decision Card
           </button>
         </div>
 

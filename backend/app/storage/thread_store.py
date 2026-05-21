@@ -21,6 +21,7 @@ from app.storage.thread_repository import (
     submit_pressure_answer as _submit_pressure_answer,
     skip_pressure_scenario as _skip_pressure_scenario,
     run_simulation as _run_simulation,
+    save_v2_simulation as _save_v2_simulation,
     get_latest_simulation as _get_latest_simulation,
     get_simulation_history as _get_simulation_history,
     get_extraction_schema as _get_extraction_schema,
@@ -124,6 +125,10 @@ async def get_thread_export_data(thread_id: str) -> dict[str, Any] | None:
 
 async def get_all_threads_export_data() -> list[dict[str, Any]]:
     return await _get_all_threads_export_data()
+
+
+async def save_v2_simulation(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    return await _save_v2_simulation(thread_id, payload)
 
 
 async def cleanup_empty_threads(older_than_hours: int = 24) -> int:

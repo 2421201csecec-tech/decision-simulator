@@ -28,7 +28,7 @@ interface FailureInsights {
 }
 
 interface RightPanelProps {
-  view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
+  view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis" | "decision-card";
   threadId?: string | null;
   isCollapsed: boolean;
   onToggleCollapse: () => void;

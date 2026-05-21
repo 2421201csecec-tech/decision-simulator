@@ -5,6 +5,7 @@ import { PressureTest } from "./pressure-test";
 import { DecisionOutput } from "./decision-output";
 import { DiagnoseFailure } from "./diagnose-failure";
 import { SimulationView } from "./simulation-view";
+import DecisionCardView from "./decision-card-view";
 
 function EidozLogoLarge({ className = "" }: { className?: string }) {
   return (
@@ -42,7 +43,7 @@ function EidozLogoLarge({ className = "" }: { className?: string }) {
 }
 
 interface CenterPanelProps {
-  view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis";
+  view: "home" | "clarify" | "pressure-test" | "decision-output" | "simulation" | "failure-analysis" | "decision-card";
   selectedThreadId?: string | null;
   onStartDecision: () => void;
   onBack: () => void;
@@ -53,6 +54,7 @@ interface CenterPanelProps {
   onSubmitFinal: () => void;
   onRunSimulation?: () => void;
   onStartRevision?: () => void;
+  onViewDecisionCard?: () => void;
   onRebuildDecision?: (context?: { failedTitle: string; failedLessons: string[] }) => void;
   decisionData?: any;
   selectedFailedDecision?: string | null;
@@ -61,7 +63,7 @@ interface CenterPanelProps {
   onFailureAnalysisComplete?: (data: { likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; }) => void;
 }
 
-export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext, onFailureAnalysisComplete }: CenterPanelProps) {
+export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onViewDecisionCard, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext, onFailureAnalysisComplete }: CenterPanelProps) {
   if (view === "clarify") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
@@ -95,6 +97,19 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           onBack={onBack}
           onRunSimulation={onRunSimulation || (() => {})}
           onStartRevision={onStartRevision || (() => {})}
+          onViewDecisionCard={onViewDecisionCard || (() => {})}
+        />
+      </main>
+    );
+  }
+
+  if (view === "decision-card") {
+    return (
+      <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
+        <DecisionCardView
+          threadId={selectedThreadId!}
+          onBack={onBack}
+          onFailureAnalysis={() => {}}
         />
       </main>
     );
