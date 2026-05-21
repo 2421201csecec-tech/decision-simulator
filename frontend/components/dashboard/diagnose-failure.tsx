@@ -169,8 +169,8 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, o
 
           <div className="rounded-2xl border border-border/50 bg-secondary/30 p-6 space-y-5">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Decision</p>
-              <p className="text-lg font-semibold text-foreground">{cleanTitle || (snapshot?.title as string) || failedDecision}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Decision Title</p>
+              <p className="text-lg font-semibold text-foreground">{(() => { const t = cleanTitle || (snapshot?.title as string) || failedDecision; return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; })()}</p>
             </div>
             {!!snapshot?.coreProblem && (
               <div>
@@ -231,35 +231,66 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, o
   if (step === 1 || step === 2 || step === 3 || step === 4) {
     const stepNum = step as 1 | 2 | 3 | 4;
     const questions = {
-      1: { label: "What did you actually do after this decision?", value: whatDid, setter: setWhatDid },
-      2: { label: "What outcome did you expect, and by when?", value: expectedOutcome, setter: setExpectedOutcome },
-      3: { label: "What outcome did you actually get?", value: whatHappened, setter: setWhatHappened },
-      4: { label: "What surprised you most about the result?", value: biggestSurprise, setter: setBiggestSurprise },
+      1: {
+        label: "What did you actually do after this decision?",
+        value: whatDid, setter: setWhatDid,
+        why: "Tells us what action was actually taken vs. what was planned — the first gap often lives here.",
+      },
+      2: {
+        label: "What outcome did you expect, and by when?",
+        value: expectedOutcome, setter: setExpectedOutcome,
+        why: "Anchors the baseline — without a clear expectation, there's no way to measure where reality diverged.",
+      },
+      3: {
+        label: "What outcome did you actually get?",
+        value: whatHappened, setter: setWhatHappened,
+        why: "The raw result. Comparing this to your expectation is where the failure pattern emerges.",
+      },
+      4: {
+        label: "What surprised you most about the result?",
+        value: biggestSurprise, setter: setBiggestSurprise,
+        why: "Surprises reveal blind spots — the assumptions you didn't know you were making.",
+      },
     };
     const current = questions[stepNum];
+    const decisionTitle = cleanTitle || (snapshot?.title as string) || failedDecision;
 
     return (
       <div className="h-full flex flex-col overflow-hidden px-8 py-8">
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-3 mb-1">
           <button onClick={() => setStep((stepNum - 1) as Step)} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary/30">
             <ArrowLeft className="w-4 h-4" />
           </button>
+          <span className="text-sm font-semibold text-foreground">Reality Check</span>
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground">{stepNum} / 4</span>
         </div>
 
-        <div className="h-0.5 bg-border/30 rounded-full mb-8">
+        <div className="h-0.5 bg-border/30 rounded-full mb-6 mt-3">
           <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${(stepNum / 4) * 100}%` }} />
         </div>
 
-        <div className="flex-1 flex flex-col justify-center max-w-xl mx-auto w-full space-y-6">
-          <label className="text-xl font-medium text-foreground leading-snug">{current.label}</label>
+        {/* Decision context chip */}
+        {decisionTitle && (
+          <div className="mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 border border-border/40">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent/70 shrink-0" />
+              <span className="text-xs text-muted-foreground truncate max-w-xs">
+                {decisionTitle.charAt(0).toUpperCase() + decisionTitle.slice(1)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 flex flex-col justify-start max-w-xl mx-auto w-full space-y-5 pt-4">
+          <p className="text-2xl font-serif text-foreground mb-6">{current.why}</p>
+          <label className="text-base text-foreground/70 leading-snug">{current.label}</label>
           <textarea
             value={current.value}
             onChange={(e) => current.setter(e.target.value)}
             autoFocus
             placeholder="Write your answer here…"
-            className="w-full px-4 py-3 bg-secondary border border-border/50 rounded-xl text-sm text-foreground placeholder-muted-foreground/50 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all resize-none"
+            className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"
             rows={6}
           />
           {error && <p className="text-xs text-destructive">{error}</p>}
@@ -267,10 +298,7 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, o
 
         <div className="pt-6">
           <button
-            onClick={() => {
-              if (stepNum < 4) setStep((stepNum + 1) as Step);
-              else handleSubmitIntake();
-            }}
+            onClick={() => { if (stepNum < 4) setStep((stepNum + 1) as Step); else handleSubmitIntake(); }}
             disabled={!current.value.trim()}
             className="w-full px-6 py-3 bg-accent text-accent-foreground rounded-full text-sm font-semibold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-accent/20 disabled:opacity-40 disabled:cursor-not-allowed"
           >

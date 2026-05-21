@@ -7,6 +7,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from sqlalchemy import delete, func, select, update as sa_update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 
@@ -1165,22 +1166,46 @@ async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
 # Failure analysis
 # ---------------------------------------------------------------------------
 
-def _enrich_snapshot_assumptions(clarify_draft: dict, extraction_schema: dict | None) -> dict:
-    """Return clarify_draft with assumptions enriched from extraction_schema when draft has none."""
+def _format_constraint(c: dict, var_map: dict) -> str:
+    op_symbols = {">=": "≥", "<=": "≤", ">": ">", "<": "<", "==": "=", "!=": "≠"}
+    target = c.get("target", "")
+    var_name = var_map.get(target) or target.replace("var_", "").replace("_", " ").title()
+    operator = op_symbols.get(c.get("operator", ""), c.get("operator", ""))
+    value = c.get("value", "")
+    unit = c.get("unit") or ""
+    return f"{var_name} {operator} {value} {unit}".strip()
+
+
+def _enrich_snapshot(clarify_draft: dict, extraction_schema: dict | None) -> dict:
+    """Build snapshot from clarify_draft, overriding with LLM-extracted content where available."""
     snapshot = dict(clarify_draft or {})
-    if snapshot.get("assumptions"):
+    if not extraction_schema:
         return snapshot
 
-    # Fall back to extraction schema assumptions (LLM-derived with fragility scores)
-    if extraction_schema:
-        schema_assumptions = extraction_schema.get("assumptions") or []
-        if schema_assumptions:
-            texts = [
-                a.get("text") or a.get("statement") or ""
-                for a in schema_assumptions
-                if isinstance(a, dict)
-            ]
-            snapshot["assumptions"] = [t for t in texts if t]
+    # Core problem → LLM-refined decision description
+    if extraction_schema.get("decision"):
+        snapshot["coreProblem"] = extraction_schema["decision"]
+
+    # Assumptions → always use LLM-extracted (falsifiable, specific)
+    schema_assumptions = extraction_schema.get("assumptions") or []
+    if schema_assumptions:
+        texts = [
+            a.get("text") or a.get("statement") or ""
+            for a in schema_assumptions
+            if isinstance(a, dict)
+        ]
+        snapshot["assumptions"] = [t for t in texts if t]
+
+    # Constraints → format structured extraction objects as readable strings
+    schema_constraints = extraction_schema.get("constraints") or []
+    if schema_constraints:
+        var_map = {
+            v.get("variable_id", ""): v.get("name", "")
+            for v in (extraction_schema.get("variables") or [])
+            if isinstance(v, dict)
+        }
+        formatted = [_format_constraint(c, var_map) for c in schema_constraints if isinstance(c, dict)]
+        snapshot["constraints"] = [f for f in formatted if f]
 
     return snapshot
 
@@ -1202,8 +1227,9 @@ async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
         )
         fa = fa_result.scalar_one_or_none()
 
+        fresh_snapshot = _enrich_snapshot(clarify_draft or {}, extraction_schema)
+
         if fa is None:
-            snapshot = _enrich_snapshot_assumptions(clarify_draft or {}, extraction_schema)
             fa = FailureAnalysis(
                 id=str(uuid4()),
                 decision_id=thread_id,
@@ -1215,13 +1241,26 @@ async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
                 cognitive_bias="",
                 missed_variable="",
                 recommendation="",
-                snapshot=snapshot,
+                snapshot=fresh_snapshot,
                 updated_at=_now(),
             )
             session.add(fa)
-            await session.commit()
-        elif fa.snapshot is None:
-            fa.snapshot = _enrich_snapshot_assumptions(clarify_draft or {}, extraction_schema)
+            try:
+                await session.commit()
+            except IntegrityError:
+                # Concurrent request already inserted — roll back and fetch it
+                await session.rollback()
+                fa_result2 = await session.execute(
+                    select(FailureAnalysis).where(FailureAnalysis.decision_id == thread_id)
+                )
+                fa = fa_result2.scalar_one_or_none()
+                if fa is None:
+                    return None
+                fa.snapshot = fresh_snapshot
+                await session.commit()
+        else:
+            # Always refresh snapshot from latest extraction schema
+            fa.snapshot = fresh_snapshot
             await session.commit()
 
         return _fa_to_dict(fa)
