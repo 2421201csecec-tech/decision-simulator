@@ -13,6 +13,7 @@ import {
   fetchGroupedThreads,
   fetchPressureTest,
   fetchSimulationState,
+  rebuildDecision,
   saveClarifyDraft,
   triggerExtraction,
   type ClarifyDraft,
@@ -232,10 +233,23 @@ export default function Dashboard() {
     setView("failure-analysis");
   };
 
-  const handleRebuildDecision = (context?: { failedTitle: string; failedLessons: string[] }) => {
-    setView("clarify");
-    setSelectedFailedDecision(null);
-    setReentryContext(context || null);
+  const handleRebuildDecision = async (context?: { failedTitle: string; failedLessons: string[] }) => {
+    if (!selectedThreadId) return;
+    const failedThreadId = selectedThreadId;
+    const lessons = context?.failedLessons ?? [];
+
+    try {
+      setUiError(null);
+      const newThread = await rebuildDecision(failedThreadId, lessons);
+      setSelectedThreadId(newThread.id);
+      setSelectedFailedDecision(null);
+      setReentryContext(null);
+      setPressureTestState(null);
+      setView("pressure-test");
+      await refreshGroupedThreads();
+    } catch (error) {
+      setUiError(error instanceof Error ? error.message : "Failed to rebuild decision.");
+    }
   };
 
   const handleLogoClick = () => {

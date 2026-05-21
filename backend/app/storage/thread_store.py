@@ -34,6 +34,7 @@ from app.storage.thread_repository import (
     get_thread_export_data as _get_thread_export_data,
     get_all_threads_export_data as _get_all_threads_export_data,
     cleanup_empty_threads as _cleanup_empty_threads,
+    rebuild_thread as _rebuild_thread,
 )
 
 ThreadStatus = Literal["active", "revision", "failed", "completed"]
@@ -133,3 +134,7 @@ async def save_v2_simulation(thread_id: str, payload: dict[str, Any]) -> dict[st
 
 async def cleanup_empty_threads(older_than_hours: int = 24) -> int:
     return await _cleanup_empty_threads(older_than_hours)
+
+
+async def rebuild_thread(thread_id: str, user_id: str, lessons: list[str]) -> dict[str, Any] | None:
+    return await _rebuild_thread(thread_id, user_id, lessons)

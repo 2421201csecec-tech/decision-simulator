@@ -1688,6 +1688,63 @@ async def _classify_and_write_patterns(
         logger.warning("_classify_and_write_patterns failed source=%s", source, exc_info=True)
 
 
+async def rebuild_thread(thread_id: str, user_id: str, lessons: list[str]) -> dict[str, Any] | None:
+    """
+    Create a revision thread from a failed thread.
+    Copies clarify_draft + extraction_schema, embeds lessons as _failure_context,
+    pre-generates pressure test scenarios from empirical context. No LLM extraction needed.
+    """
+    from app.pressure_test.generator import pre_generate_roots
+
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
+        )
+        source = result.scalar_one_or_none()
+        if source is None:
+            return None
+
+        now = _now()
+        source_draft = dict(source.clarify_draft or {})
+        source_schema = dict(source.extraction_schema or {})
+
+        # Strip any stale _failure_context from source before embedding new lessons
+        source_draft.pop("_failure_context", None)
+        enriched_draft = {**source_draft, "_failure_context": lessons}
+
+        new_decision = Decision(
+            decision_id=str(uuid4()),
+            title=source_draft.get("title") or source.title or "Untitled Decision",
+            status="revision",
+            parent_decision_id=thread_id,
+            created_at=now,
+            updated_at=now,
+            user_id=user_id,
+            clarify_draft=enriched_draft,
+            extraction_schema=source_schema,
+            pressure_test=None,
+        )
+        session.add(new_decision)
+        await session.commit()
+
+        new_thread_id = new_decision.decision_id
+
+    # Pre-generate pressure test outside the session to avoid holding the connection
+    weak_spots = await get_weak_spots(user_id)
+    ai_roots = await pre_generate_roots(enriched_draft, weak_spots=weak_spots or None)
+    state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else _create_default_pressure_state()
+
+    async with get_async_session() as session:
+        result = await session.execute(select(Decision).where(Decision.decision_id == new_thread_id))
+        decision = result.scalar_one_or_none()
+        if decision is None:
+            return None
+        decision.pressure_test = state
+        decision.updated_at = _now()
+        await session.commit()
+        return _decision_to_dict(decision)
+
+
 async def cleanup_empty_threads(older_than_hours: int = 24) -> int:
     from datetime import timedelta
     cutoff = datetime.now(timezone.utc) - timedelta(hours=older_than_hours)

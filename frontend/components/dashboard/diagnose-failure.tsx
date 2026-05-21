@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle, XCircle, MinusCircle, Plus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, XCircle, MinusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   fetchFailureAnalysis,
@@ -75,7 +75,6 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, o
   const [recommendation, setRecommendation] = useState("");
 
   const [lessons, setLessons] = useState<FailureLesson[]>([]);
-  const [newLesson, setNewLesson] = useState("");
 
   useEffect(() => {
     if (!threadId) { setLoading(false); return; }
@@ -395,88 +394,14 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, o
 
         <div className="pt-6">
           <button
-            onClick={() => setStep(6)}
+            onClick={() => onRebuild({ failedTitle: failedDecision, failedLessons: lessons.map((l) => l.statement) })}
             className="w-full px-6 py-3 bg-accent text-accent-foreground rounded-full text-sm font-semibold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-accent/20"
           >
-            See Extracted Lessons
+            Rebuild Decision
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
       </div>
     );
   }
-
-  // Step 6 — Lessons
-  return (
-    <div className="h-full flex flex-col overflow-hidden px-8 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <button onClick={() => setStep(5)} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary/30">
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <h1 className="text-xl font-semibold text-foreground">Lessons</h1>
-      </div>
-
-      <div className="flex-1 overflow-y-auto scroll-container space-y-4">
-        <p className="text-sm text-muted-foreground">
-          These lessons will shape your next pressure test. Edit or remove anything that doesn't ring true.
-        </p>
-
-        <ul className="space-y-2">
-          {lessons.map((lesson, i) => (
-            <li key={i} className="flex items-start gap-3 rounded-xl border border-border/40 bg-card p-4">
-              <span className="text-accent shrink-0 mt-0.5">•</span>
-              <span className="text-sm text-foreground/80 flex-1 leading-snug">{lesson.statement}</span>
-              <button
-                onClick={() => setLessons(lessons.filter((_, idx) => idx !== i))}
-                className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-
-        {lessons.length === 0 && (
-          <p className="text-xs text-muted-foreground/50 italic">No lessons extracted. Add one below.</p>
-        )}
-
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newLesson}
-            onChange={(e) => setNewLesson(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newLesson.trim()) {
-                setLessons([...lessons, { statement: newLesson.trim(), patternType: "user_added", isNew: true }]);
-                setNewLesson("");
-              }
-            }}
-            placeholder="Add a lesson…"
-            className="flex-1 px-3 py-2 bg-secondary border border-border/50 rounded-lg text-sm text-foreground placeholder-muted-foreground/50 focus:outline-none focus:border-accent/50"
-          />
-          <button
-            onClick={() => {
-              if (newLesson.trim()) {
-                setLessons([...lessons, { statement: newLesson.trim(), patternType: "user_added", isNew: true }]);
-                setNewLesson("");
-              }
-            }}
-            className="px-3 py-2 text-accent hover:text-accent/80 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="pt-6">
-        <button
-          onClick={() => onRebuild({ failedTitle: failedDecision, failedLessons: lessons.map((l) => l.statement) })}
-          className="w-full px-6 py-3 bg-accent text-accent-foreground rounded-full text-sm font-semibold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-accent/20"
-        >
-          Confirm & Rebuild Decision
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
 }

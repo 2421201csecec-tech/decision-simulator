@@ -93,6 +93,12 @@ async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None 
     else:
         weak_spots_text = "(none — generate scenarios based on stated assumptions only)"
 
+    failure_lessons = clarify_draft.get("_failure_context") or []
+    if failure_lessons:
+        failure_context_text = "\n".join(f"- {l}" for l in failure_lessons[:5])
+    else:
+        failure_context_text = "(none)"
+
     template = (_PROMPT_DIR / "pre_generate_v1.0.0.txt").read_text(encoding="utf-8")
     prompt = _fill_template(
         template,
@@ -102,6 +108,7 @@ async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None 
         constraints=", ".join(str(c) for c in constraints) if constraints else "(none)",
         assumptions=", ".join(str(a) for a in assumptions) if assumptions else "(none)",
         weak_spots=weak_spots_text,
+        failure_context=failure_context_text,
     )
 
     temperature = 0.4

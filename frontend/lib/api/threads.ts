@@ -264,6 +264,17 @@ export async function saveClarifyDraft(threadId: string, draft: ClarifyDraft): P
   return data.clarifyDraft;
 }
 
+export async function rebuildDecision(threadId: string, lessons: string[]): Promise<ThreadRecord> {
+  const response = await fetch(`/api/threads/${threadId}/rebuild`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lessons }),
+  });
+
+  if (!response.ok) return parseApiError(response, "Failed to rebuild decision");
+  return response.json();
+}
+
 export async function generatePressureTest(threadId: string): Promise<PressureTestState> {
   const response = await fetch(`/api/threads/${threadId}/pressure-test`, {
     method: "POST",

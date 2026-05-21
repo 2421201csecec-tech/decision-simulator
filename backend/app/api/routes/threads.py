@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
-from app.storage.thread_store import create_thread, get_grouped_threads
+from app.storage.thread_store import create_thread, get_grouped_threads, rebuild_thread
 
 router = APIRouter()
 
@@ -64,4 +64,16 @@ async def create_threads(request: Request) -> JSONResponse:
         user_id=request.state.user_id,
     )
 
+    return JSONResponse(thread, status_code=201)
+
+
+class RebuildPayload(BaseModel):
+    lessons: list[str] = Field(default_factory=list)
+
+
+@router.post("/threads/{thread_id}/rebuild")
+async def rebuild_thread_route(thread_id: str, payload: RebuildPayload, request: Request) -> JSONResponse:
+    thread = await rebuild_thread(thread_id, request.state.user_id, payload.lessons)
+    if thread is None:
+        return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse(thread, status_code=201)
