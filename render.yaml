@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: eidoz-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: PATTERN_ENGINE_ENABLED
+        value: "true"
+      - key: MEMORY_WRITE_ENABLED
+        value: "false"

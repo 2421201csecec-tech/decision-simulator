@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [agreed, setAgreed] = useState(false)
 
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
@@ -51,12 +52,58 @@ export default function LoginPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-3 w-full">
+            {/* Checkbox */}
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="relative mt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="sr-only"
+                />
+                <div
+                  className="w-4 h-4 rounded flex items-center justify-center transition-colors"
+                  style={{
+                    border: `1.5px solid ${agreed ? 'var(--foreground)' : 'var(--border)'}`,
+                    background: agreed ? 'var(--foreground)' : 'transparent',
+                  }}
+                >
+                  {agreed && (
+                    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                      <path d="M1 3.5L3.5 6L8 1" stroke="var(--background)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-xs leading-relaxed" style={{ color: 'var(--muted-foreground)' }}>
+                I agree to the{' '}
+                <a
+                  href="/terms"
+                  onClick={(e) => e.stopPropagation()}
+                  className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a
+                  href="/privacy"
+                  onClick={(e) => e.stopPropagation()}
+                  className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--foreground)' }}
+                >
+                  Privacy Policy
+                </a>
+              </span>
+            </label>
+
             {/* Google */}
             <button
               onClick={signInWithGoogle}
-              className="flex items-center justify-center gap-3 w-full px-4 py-3 rounded-lg text-base font-medium transition-colors cursor-pointer"
+              disabled={!agreed}
+              className="flex items-center justify-center gap-3 w-full px-4 py-3 rounded-lg text-base font-medium transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'var(--card)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--secondary)')}
+              onMouseEnter={(e) => { if (agreed) e.currentTarget.style.background = 'var(--secondary)' }}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--card)')}
             >
               <GoogleIcon />
@@ -89,8 +136,8 @@ export default function LoginPage() {
 
             <button
               onClick={signInWithEmail}
-              disabled={loading || !email.trim()}
-              className="w-full px-4 py-3 rounded-lg text-base font-medium transition-opacity cursor-pointer disabled:opacity-40"
+              disabled={loading || !email.trim() || !agreed}
+              className="w-full px-4 py-3 rounded-lg text-base font-medium transition-opacity cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'var(--foreground)', color: 'var(--background)' }}
             >
               {loading ? 'Sending…' : 'Continue with email'}
