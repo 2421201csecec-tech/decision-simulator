@@ -74,13 +74,8 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token;
 
-    const thread = await getThreadById(threadId);
-    let extractionSchema = thread?.extractionSchema ?? null;
-
-    if (!extractionSchema) {
-      const backendState = await fetchBackendSimulationState(threadId, accessToken);
-      extractionSchema = (backendState?.extractionSchema as Record<string, unknown> | null) ?? null;
-    }
+    const backendState = await fetchBackendSimulationState(threadId, accessToken);
+    const extractionSchema = (backendState?.extractionSchema as Record<string, unknown> | null) ?? null;
 
     if (extractionSchema) {
       // Step 1: Monte Carlo distributions + sensitivity
@@ -104,7 +99,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   }
 
   // Fallback: legacy hardcoded simulation (no extractionSchema or backend unavailable)
-  const thread = await getThreadById(threadId);
+  const thread = await getThreadById(threadId).catch(() => null);
   if (!thread) {
     return NextResponse.json({ message: "Thread not found" }, { status: 404 });
   }
