@@ -5,6 +5,8 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
 
+  console.log('[auth/callback] code:', code ? 'present' : 'missing', 'origin:', origin)
+
   const response = NextResponse.redirect(origin)
 
   if (code) {
@@ -21,7 +23,8 @@ export async function GET(request: NextRequest) {
         },
       },
     )
-    await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    console.log('[auth/callback] exchange result:', error ? `error: ${error.message}` : `user: ${data.user?.id}`)
   }
 
   return response
