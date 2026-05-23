@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
 from app.storage.thread_store import get_all_threads_export_data, get_thread_export_data
@@ -16,8 +16,8 @@ def _now_iso() -> str:
 
 
 @router.get("/threads/export/all")
-async def export_all_threads() -> Response:
-    threads = await get_all_threads_export_data()
+async def export_all_threads(request: Request) -> Response:
+    threads = await get_all_threads_export_data(request.state.user_id)
     payload = {
         "version": "v1",
         "tier": "free",
@@ -33,8 +33,8 @@ async def export_all_threads() -> Response:
 
 
 @router.get("/threads/{thread_id}/export")
-async def export_thread(thread_id: str) -> Response:
-    export_data = await get_thread_export_data(thread_id)
+async def export_thread(thread_id: str, request: Request) -> Response:
+    export_data = await get_thread_export_data(thread_id, request.state.user_id)
     if export_data is None:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     payload = {

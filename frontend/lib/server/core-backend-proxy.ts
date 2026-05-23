@@ -80,13 +80,17 @@ export async function proxyRequestToCoreBackend(options: ProxyRequestOptions): P
     };
 
     if (options.method !== "GET") {
-      init.body = await options.request.text();
+      init.body = await options.request.clone().text();
     }
 
-    const response = await fetch(url, init);
+    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(25_000) });
     return await toNextResponse(response);
-  } catch {
-    // In strangler mode we fallback to local route logic if proxy call fails.
-    return null;
+  } catch (err) {
+    console.error("[proxy] backend unreachable", {
+      url,
+      method: options.method,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return NextResponse.json({ message: "Service temporarily unavailable" }, { status: 503 });
   }
 }

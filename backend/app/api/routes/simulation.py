@@ -81,7 +81,7 @@ async def post_simulate(req: SimulateRequest, request: Request) -> JSONResponse:
 
 
 @router.post("/score")
-async def post_score(req: ScoreRequest) -> JSONResponse:
+async def post_score(req: ScoreRequest, request: Request) -> JSONResponse:
     """LLM explanation pass. Consumes /simulate output. options[] has all 9 metrics."""
     options = req.simulation.get("options") or []
     confidence = float(req.simulation.get("confidence") or 0.0)
@@ -110,7 +110,8 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
 
     if req.thread_id:
         import asyncio
-        asyncio.create_task(save_v2_simulation(req.thread_id, result))
+        user_id = request.state.user_id
+        asyncio.create_task(save_v2_simulation(req.thread_id, result, user_id))
 
     return JSONResponse(result)
 # The following endpoints fetch past simulation runs for a thread.
@@ -120,16 +121,16 @@ async def post_score(req: ScoreRequest) -> JSONResponse:
 @router.post("/threads/{thread_id}/simulation/save")
 async def save_simulation_v2(thread_id: str, request: Request) -> JSONResponse:
     body = await request.json()
-    run = await save_v2_simulation(thread_id, body)
+    run = await save_v2_simulation(thread_id, body, request.state.user_id)
     if run is None:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"run": run}, status_code=201)
 
 
 @router.get("/threads/{thread_id}/simulation")
-async def get_simulation(thread_id: str) -> JSONResponse:
+async def get_simulation(thread_id: str, request: Request) -> JSONResponse:
     from app.storage.thread_store import get_extraction_schema
-    run = await get_latest_simulation(thread_id)
+    run = await get_latest_simulation(thread_id, request.state.user_id)
     extraction_schema = await get_extraction_schema(thread_id)
     if run is None and extraction_schema is None:
         return JSONResponse({"message": "Simulation run not found"}, status_code=404)
@@ -174,9 +175,9 @@ async def summarize_labels(req: LabelRequest) -> JSONResponse:
 #this endpoint is not currently used by the frontend but is available for debugging and future features like showing past runs
 
 @router.get("/threads/{thread_id}/simulation/history")
-async def get_simulation_history_route(thread_id: str) -> JSONResponse:
+async def get_simulation_history_route(thread_id: str, request: Request) -> JSONResponse:
     from app.storage.thread_store import get_simulation_history as _get_history
-    runs = await _get_history(thread_id)
+    runs = await _get_history(thread_id, request.state.user_id)
     if runs is None:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"runs": runs})

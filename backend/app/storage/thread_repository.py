@@ -236,10 +236,10 @@ async def get_thread_by_id(thread_id: str, user_id: str) -> dict[str, Any] | Non
 # Clarify draft
 # ---------------------------------------------------------------------------
 
-async def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str, Any] | None:
+async def save_clarify_draft(thread_id: str, draft: dict[str, Any], user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision).where(Decision.decision_id == thread_id)
+            select(Decision).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         decision = result.scalar_one_or_none()
         if decision is None:
@@ -494,7 +494,7 @@ async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any]
 
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision).where(Decision.decision_id == thread_id)
+            select(Decision).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         decision = result.scalar_one_or_none()
         if decision is None:
@@ -518,10 +518,10 @@ async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any]
         return _decision_to_dict(decision)
 
 
-async def get_pressure_test(thread_id: str) -> dict[str, Any] | None:
+async def get_pressure_test(thread_id: str, user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision.pressure_test).where(Decision.decision_id == thread_id)
+            select(Decision.pressure_test).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         row = result.first()
         if row is None:
@@ -552,6 +552,33 @@ async def save_extraction_schema(thread_id: str, schema: dict) -> bool:
         decision.updated_at = _now()
         await session.commit()
         return True
+
+
+async def save_extraction_session(thread_id: str, data: dict) -> None:
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id)
+        )
+        decision = result.scalar_one_or_none()
+        if decision is None:
+            return
+        decision.extraction_session = data
+        decision.updated_at = _now()
+        await session.commit()
+
+
+async def load_and_clear_extraction_session(thread_id: str) -> dict | None:
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(Decision.decision_id == thread_id)
+        )
+        decision = result.scalar_one_or_none()
+        if decision is None or not decision.extraction_session:
+            return None
+        data = dict(decision.extraction_session)
+        decision.extraction_session = None
+        await session.commit()
+        return data
 
 
 async def _advance_pressure_scenario(
@@ -610,7 +637,7 @@ async def _submit_pressure_answer_v2(
 
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision).where(Decision.decision_id == thread_id)
+            select(Decision).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         decision = result.scalar_one_or_none()
         if decision is None:
@@ -725,7 +752,7 @@ async def submit_pressure_answer(
     probe_id: str | None = None,
     user_id: str = "",
 ) -> dict[str, Any] | None:
-    pt = await get_pressure_test(thread_id)
+    pt = await get_pressure_test(thread_id, user_id)
     if pt and "rootScenarios" in pt:
         return await _submit_pressure_answer_v2(thread_id, scenario_id, answer, probe_id, user_id)
     return await _advance_pressure_scenario(
@@ -741,9 +768,9 @@ async def skip_pressure_scenario(
     probe_id: str | None = None,
     user_id: str = "",
 ) -> dict[str, Any] | None:
-    pt = await get_pressure_test(thread_id)
+    pt = await get_pressure_test(thread_id, user_id)
     if pt and "rootScenarios" in pt:
-        return await _skip_pressure_scenario_v2(thread_id, scenario_id, probe_id)
+        return await _skip_pressure_scenario_v2(thread_id, scenario_id, probe_id, user_id)
     return await _advance_pressure_scenario(
         thread_id,
         scenario_id,
@@ -755,11 +782,12 @@ async def _skip_pressure_scenario_v2(
     thread_id: str,
     root_id: int,
     probe_id: str | None = None,
+    user_id: str = "",
 ) -> dict[str, Any] | None:
     """v2 skip: closes the current root (or probe) and moves to next open root."""
     async with get_async_session() as session:
         result = await session.execute(
-            select(Decision).where(Decision.decision_id == thread_id)
+            select(Decision).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         decision = result.scalar_one_or_none()
         if decision is None:
@@ -935,10 +963,10 @@ async def run_simulation(thread_id: str, variables: dict[str, Any]) -> dict[str,
         }
 
 
-async def get_latest_simulation(thread_id: str) -> dict[str, Any] | None:
+async def get_latest_simulation(thread_id: str, user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         check = await session.execute(
-            select(Decision.decision_id).where(Decision.decision_id == thread_id)
+            select(Decision.decision_id).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         if check.scalar_one_or_none() is None:
             return None
@@ -971,10 +999,10 @@ async def get_latest_simulation(thread_id: str) -> dict[str, Any] | None:
         }
 
 
-async def save_v2_simulation(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+async def save_v2_simulation(thread_id: str, payload: dict[str, Any], user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         check = await session.execute(
-            select(Decision.decision_id).where(Decision.decision_id == thread_id)
+            select(Decision.decision_id).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         if check.scalar_one_or_none() is None:
             return None
@@ -1002,10 +1030,10 @@ async def save_v2_simulation(thread_id: str, payload: dict[str, Any]) -> dict[st
         }
 
 
-async def get_simulation_history(thread_id: str) -> list[dict[str, Any]] | None:
+async def get_simulation_history(thread_id: str, user_id: str) -> list[dict[str, Any]] | None:
     async with get_async_session() as session:
         check = await session.execute(
-            select(Decision.decision_id).where(Decision.decision_id == thread_id)
+            select(Decision.decision_id).where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         if check.scalar_one_or_none() is None:
             return None
@@ -1121,13 +1149,13 @@ def _compute_decision_output(thread: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
+async def get_decision_output_data(thread_id: str, user_id: str) -> dict[str, Any] | None:
     from app.decision_output.generator import generate_decision_output
 
     async with get_async_session() as session:
         result = await session.execute(
             select(Decision)
-            .where(Decision.decision_id == thread_id)
+            .where(Decision.decision_id == thread_id, Decision.user_id == user_id)
             .options(selectinload(Decision.simulation_runs), selectinload(Decision.failure_analysis))
         )
         decision = result.scalar_one_or_none()
@@ -1210,11 +1238,11 @@ def _enrich_snapshot(clarify_draft: dict, extraction_schema: dict | None) -> dic
     return snapshot
 
 
-async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
+async def get_failure_analysis(thread_id: str, user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         decision_result = await session.execute(
             select(Decision.decision_id, Decision.clarify_draft, Decision.extraction_schema)
-            .where(Decision.decision_id == thread_id)
+            .where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         row = decision_result.first()
         if row is None:
@@ -1266,13 +1294,13 @@ async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
         return _fa_to_dict(fa)
 
 
-async def save_failure_analysis(thread_id: str, payload: dict[str, Any], user_id: str = "") -> dict[str, Any] | None:
+async def save_failure_analysis(thread_id: str, payload: dict[str, Any], user_id: str) -> dict[str, Any] | None:
     from app.failure.analyzer import analyze_gaps, extract_lessons
 
     async with get_async_session() as session:
         decision_result = await session.execute(
             select(Decision.decision_id, Decision.decision_category)
-            .where(Decision.decision_id == thread_id)
+            .where(Decision.decision_id == thread_id, Decision.user_id == user_id)
         )
         row = decision_result.first()
         if row is None:
@@ -1787,17 +1815,18 @@ def _build_thread_export(thread: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def get_thread_export_data(thread_id: str) -> dict[str, Any] | None:
-    thread = await get_thread_by_id(thread_id)
+async def get_thread_export_data(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    thread = await get_thread_by_id(thread_id, user_id)
     if not thread:
         return None
     return _build_thread_export(thread)
 
 
-async def get_all_threads_export_data() -> list[dict[str, Any]]:
+async def get_all_threads_export_data(user_id: str) -> list[dict[str, Any]]:
     async with get_async_session() as session:
         result = await session.execute(
             select(Decision)
+            .where(Decision.user_id == user_id)
             .options(
                 selectinload(Decision.simulation_runs),
                 selectinload(Decision.failure_analysis),

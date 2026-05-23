@@ -72,6 +72,7 @@ async def put_clarify_draft(thread_id: str, request: Request) -> JSONResponse:
             "constraints": parsed.constraints,
             "assumptions": parsed.assumptions,
         },
+        user_id=request.state.user_id,
     )
 
     if not saved:
@@ -100,7 +101,7 @@ async def post_extract(thread_id: str, request: Request) -> JSONResponse:
         return JSONResponse({"message": "Clarify draft is empty"}, status_code=400)
 
     user_input = compose_draft_input(clarify_draft)
-    result = await run_extraction(user_input, user_id=user_id)
+    result = await run_extraction(user_input, user_id=user_id, decision_id=thread_id)
 
     if result.get("status") == "clarification_needed":
         return JSONResponse({"message": "Clarification needed", "detail": result}, status_code=409)

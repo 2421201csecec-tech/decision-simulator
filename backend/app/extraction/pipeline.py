@@ -68,7 +68,7 @@ _FALLBACK_TEMPLATE = (
 # In-memory session state for 409 clarification resume
 # ---------------------------------------------------------------------------
 
-_sessions: dict[str, dict[str, Any]] = {}
+_sessions: dict[str, dict[str, Any]] = {}  # fallback for calls without decision_id
 
 
 class ExtractionError(Exception):
@@ -242,15 +242,21 @@ async def run_extraction(
     caps = await get_capabilities(user_id, category_hint or "")
 
     # Resume from saved session if provided
-    if session_id and session_id in _sessions:
-        session = _sessions.pop(session_id)
-        schema = session["partial_schema"]
-        resume_from_pass = session["failed_pass"]
-        # Inject clarification answer as additional error context for the failed pass
-        if clarification_answer:
-            user_input = f"{session['original_input']}\n\nAdditional clarification: {clarification_answer}"
-        else:
-            user_input = session["original_input"]
+    if session_id:
+        # decision_id == session_id when called from the extract route
+        loaded = None
+        if decision_id:
+            from app.storage.thread_store import load_and_clear_extraction_session
+            loaded = await load_and_clear_extraction_session(decision_id)
+        if loaded is None and session_id in _sessions:
+            loaded = _sessions.pop(session_id)
+        if loaded:
+            schema = loaded["partial_schema"]
+            resume_from_pass = loaded["failed_pass"]
+            if clarification_answer:
+                user_input = f"{loaded['original_input']}\n\nAdditional clarification: {clarification_answer}"
+            else:
+                user_input = loaded["original_input"]
 
     try:
         # Pass 1
@@ -300,12 +306,18 @@ async def run_extraction(
     except _PersistentFailure as exc:
         failed_pass = _which_pass_failed(exc.hard_errors)
         if settings.clarification_enabled:
-            sid = str(uuid4())
-            _sessions[sid] = {
+            session_data = {
                 "partial_schema": copy.deepcopy(schema),
                 "failed_pass": failed_pass,
                 "original_input": user_input,
             }
+            if decision_id:
+                from app.storage.thread_store import save_extraction_session
+                await save_extraction_session(decision_id, session_data)
+                sid = decision_id
+            else:
+                sid = str(uuid4())
+                _sessions[sid] = session_data
             return {
                 "status": "clarification_needed",
                 "clarification_question": _clarification_question(exc.hard_errors),
@@ -349,7 +361,7 @@ async def run_extraction(
     }
 
     # Fire-and-forget memory write — never blocks the response
-    if should_store(result):
+    if settings.memory_write_enabled and should_store(result):
         asyncio.create_task(write_extraction_to_memory(result))
 
     # Fire-and-forget injection log — always written (even in shadow mode)

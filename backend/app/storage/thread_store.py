@@ -26,6 +26,8 @@ from app.storage.thread_repository import (
     get_simulation_history as _get_simulation_history,
     get_extraction_schema as _get_extraction_schema,
     save_extraction_schema as _save_extraction_schema,
+    save_extraction_session as _save_extraction_session,
+    load_and_clear_extraction_session as _load_and_clear_extraction_session,
     get_decision_output_data as _get_decision_output_data,
     get_failure_analysis as _get_failure_analysis,
     save_failure_analysis as _save_failure_analysis,
@@ -56,16 +58,16 @@ async def get_thread_context_data(thread_id: str) -> dict[str, Any] | None:
     return await _get_thread_context_data(thread_id)
 
 
-async def save_clarify_draft(thread_id: str, draft: dict[str, Any]) -> dict[str, Any] | None:
-    return await _save_clarify_draft(thread_id, draft)
+async def save_clarify_draft(thread_id: str, draft: dict[str, Any], user_id: str) -> dict[str, Any] | None:
+    return await _save_clarify_draft(thread_id, draft, user_id)
 
 
 async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any] | None:
     return await _generate_pressure_test(thread_id, user_id)
 
 
-async def get_pressure_test(thread_id: str) -> dict[str, Any] | None:
-    return await _get_pressure_test(thread_id)
+async def get_pressure_test(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _get_pressure_test(thread_id, user_id)
 
 
 async def submit_pressure_answer(
@@ -84,8 +86,8 @@ async def run_simulation(thread_id: str, variables: dict[str, Any]) -> dict[str,
     return await _run_simulation(thread_id, variables)
 
 
-async def get_latest_simulation(thread_id: str) -> dict[str, Any] | None:
-    return await _get_latest_simulation(thread_id)
+async def get_latest_simulation(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _get_latest_simulation(thread_id, user_id)
 
 
 async def get_extraction_schema(thread_id: str) -> dict[str, Any] | None:
@@ -96,19 +98,27 @@ async def save_extraction_schema(thread_id: str, schema: dict) -> bool:
     return await _save_extraction_schema(thread_id, schema)
 
 
-async def get_simulation_history(thread_id: str) -> list[dict[str, Any]] | None:
-    return await _get_simulation_history(thread_id)
+async def save_extraction_session(thread_id: str, data: dict) -> None:
+    return await _save_extraction_session(thread_id, data)
 
 
-async def get_decision_output_data(thread_id: str) -> dict[str, Any] | None:
-    return await _get_decision_output_data(thread_id)
+async def load_and_clear_extraction_session(thread_id: str) -> dict | None:
+    return await _load_and_clear_extraction_session(thread_id)
 
 
-async def get_failure_analysis(thread_id: str) -> dict[str, Any] | None:
-    return await _get_failure_analysis(thread_id)
+async def get_simulation_history(thread_id: str, user_id: str) -> list[dict[str, Any]] | None:
+    return await _get_simulation_history(thread_id, user_id)
 
 
-async def save_failure_analysis(thread_id: str, payload: dict[str, Any], user_id: str = "") -> dict[str, Any] | None:
+async def get_decision_output_data(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _get_decision_output_data(thread_id, user_id)
+
+
+async def get_failure_analysis(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _get_failure_analysis(thread_id, user_id)
+
+
+async def save_failure_analysis(thread_id: str, payload: dict[str, Any], user_id: str) -> dict[str, Any] | None:
     return await _save_failure_analysis(thread_id, payload, user_id)
 
 
@@ -120,16 +130,16 @@ async def get_weak_spots(user_id: str) -> list[dict]:
     return await _get_weak_spots(user_id)
 
 
-async def get_thread_export_data(thread_id: str) -> dict[str, Any] | None:
-    return await _get_thread_export_data(thread_id)
+async def get_thread_export_data(thread_id: str, user_id: str) -> dict[str, Any] | None:
+    return await _get_thread_export_data(thread_id, user_id)
 
 
-async def get_all_threads_export_data() -> list[dict[str, Any]]:
-    return await _get_all_threads_export_data()
+async def get_all_threads_export_data(user_id: str) -> list[dict[str, Any]]:
+    return await _get_all_threads_export_data(user_id)
 
 
-async def save_v2_simulation(thread_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
-    return await _save_v2_simulation(thread_id, payload)
+async def save_v2_simulation(thread_id: str, payload: dict[str, Any], user_id: str) -> dict[str, Any] | None:
+    return await _save_v2_simulation(thread_id, payload, user_id)
 
 
 async def cleanup_empty_threads(older_than_hours: int = 24) -> int:

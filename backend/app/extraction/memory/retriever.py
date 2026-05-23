@@ -27,12 +27,17 @@ async def retrieve_similar(
     async with get_async_session() as session:
         rows = (await session.execute(
             text("""
+                WITH candidates AS (
+                    SELECT schema_json, decision_category, created_at,
+                           embedding <=> CAST(:emb AS vector) AS dist
+                    FROM extraction_memory
+                    WHERE embedding IS NOT NULL
+                )
                 SELECT schema_json, decision_category, created_at,
-                       1 - (embedding <=> CAST(:emb AS vector)) AS cosine
-                FROM extraction_memory
-                WHERE embedding IS NOT NULL
-                  AND 1 - (embedding <=> CAST(:emb AS vector)) >= :threshold
-                ORDER BY embedding <=> CAST(:emb AS vector)
+                       1 - dist AS cosine
+                FROM candidates
+                WHERE 1 - dist >= :threshold
+                ORDER BY dist
                 LIMIT 20
             """),
             {"emb": str(query_emb), "threshold": settings.memory_min_cosine},

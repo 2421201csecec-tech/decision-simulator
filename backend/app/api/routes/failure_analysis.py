@@ -28,8 +28,8 @@ class FailureAnalysisPayload(BaseModel):
 
 
 @router.get("/threads/{thread_id}/failure-analysis")
-async def get_failure_analysis_route(thread_id: str) -> JSONResponse:
-    failure_analysis = await get_failure_analysis(thread_id)
+async def get_failure_analysis_route(thread_id: str, request: Request) -> JSONResponse:
+    failure_analysis = await get_failure_analysis(thread_id, request.state.user_id)
     if failure_analysis is None:
         return JSONResponse({"message": "Thread not found"}, status_code=404)
     return JSONResponse({"failureAnalysis": failure_analysis})

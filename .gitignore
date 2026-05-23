@@ -1,4 +1,4 @@
-d# OS/editor
+# OS/editor
 .DS_Store
 Thumbs.db
 .vscode/
@@ -47,3 +47,9 @@ backend/dev.db
 # Internal docs
 docs/
 CLAUDE.md
+
+# CodeGraph index (generated — rebuild with: codegraph init -i)
+.codegraph/
+
+# Cursor IDE (machine-specific paths)
+.cursor/

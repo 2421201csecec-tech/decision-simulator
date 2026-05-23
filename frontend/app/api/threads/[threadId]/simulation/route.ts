@@ -11,6 +11,7 @@ interface Params {
 }
 
 const BACKEND_URL = process.env.CORE_BACKEND_URL?.replace(/\/$/, "") ?? "";
+const BACKEND_TIMEOUT_MS = 25_000;
 
 async function callBackend(path: string, body: unknown, accessToken?: string): Promise<unknown | null> {
   try {
@@ -21,6 +22,7 @@ async function callBackend(path: string, body: unknown, accessToken?: string): P
       headers,
       body: JSON.stringify(body),
       cache: "no-store",
+      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -38,6 +40,7 @@ async function fetchBackendSimulationState(threadId: string, accessToken?: strin
     const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, {
       cache: "no-store",
       headers,
+      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     return (await res.json()) as Record<string, unknown>;

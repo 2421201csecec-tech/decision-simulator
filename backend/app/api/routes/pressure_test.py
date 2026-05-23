@@ -42,8 +42,8 @@ class PressureSkipPayload(BaseModel):
 
 
 @router.get("/threads/{thread_id}/pressure-test")
-async def get_pressure(thread_id: str) -> JSONResponse:
-    pressure_test = await get_pressure_test(thread_id)
+async def get_pressure(thread_id: str, request: Request) -> JSONResponse:
+    pressure_test = await get_pressure_test(thread_id, request.state.user_id)
     if not pressure_test:
         return JSONResponse({"message": "Pressure test not found"}, status_code=404)
     return JSONResponse({"pressureTest": pressure_test})
@@ -72,7 +72,7 @@ async def post_pressure_answer(thread_id: str, request: Request) -> JSONResponse
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    existing = await get_pressure_test(thread_id)
+    existing = await get_pressure_test(thread_id, request.state.user_id)
     if not existing:
         return JSONResponse({"message": "Pressure test not found"}, status_code=404)
 
@@ -121,7 +121,7 @@ async def post_pressure_skip(thread_id: str, request: Request) -> JSONResponse:
         message = str(first_error.get("msg", "Invalid payload"))
         return JSONResponse({"message": message}, status_code=400)
 
-    existing = await get_pressure_test(thread_id)
+    existing = await get_pressure_test(thread_id, request.state.user_id)
     if not existing:
         return JSONResponse({"message": "Pressure test not found"}, status_code=404)
 

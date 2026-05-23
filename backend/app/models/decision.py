@@ -23,6 +23,7 @@ class Decision(Base):
     clarify_draft = Column(JSON, nullable=False, default=dict)
     pressure_test = Column(JSON, nullable=True)
     extraction_schema = Column(JSON, nullable=True)
+    extraction_session = Column(JSON, nullable=True)
     decision_output = Column(JSON, nullable=True)
     # Pattern Engine v2 scoring columns
     base_score = Column(Float, nullable=True)
