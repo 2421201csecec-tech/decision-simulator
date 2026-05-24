@@ -96,11 +96,15 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange }:
 
         if (!active) return;
 
+        if (!state) {
+          setError("Your input doesn't have enough detail to generate pressure-test scenarios. Please go back and fill in the decision title, core problem, and context more clearly.");
+          return;
+        }
+
         setPressureState(state);
         onStateChange?.(state);
 
         if (state.rootScenarios) {
-          // v2: no pre-filled answer
           setAnswer("");
         } else {
           const current = state.scenarios[state.currentIndex];
@@ -202,18 +206,22 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange }:
     );
   }
 
-  if (!isV2 && !v1Scenario) {
+  if (error || (!isV2 && !v1Scenario) || (isV2 && !activeRoot)) {
     return (
-      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-        {error ?? "No pressure-test scenarios available."}
-      </div>
-    );
-  }
-
-  if (isV2 && !activeRoot) {
-    return (
-      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-        {error ?? "No pressure-test scenarios available."}
+      <div className="h-full flex flex-col items-center justify-center gap-4 px-8 text-center">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(220,80,60,0.12)', border: '1px solid rgba(220,80,60,0.3)' }}>
+          <span style={{ color: 'rgba(220,80,60,0.8)', fontSize: 18 }}>!</span>
+        </div>
+        <p className="text-sm font-medium text-foreground/80">
+          {error ?? "No pressure-test scenarios available."}
+        </p>
+        <button
+          onClick={onBack}
+          className="text-xs px-4 py-2 rounded-lg border transition-colors"
+          style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}
+        >
+          Go back and add more detail
+        </button>
       </div>
     );
   }

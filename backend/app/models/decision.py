@@ -29,6 +29,8 @@ class Decision(Base):
     base_score = Column(Float, nullable=True)
     adjusted_score = Column(Float, nullable=True)
     experiment_group = Column(String, nullable=True)  # 'control' | 'treatment'
+    # Outcome rating: was this decision helpful? Set ~7 days after creation.
+    outcome_rating = Column(Boolean, nullable=True)
 
     simulation_runs = relationship(
         "SimulationRun",

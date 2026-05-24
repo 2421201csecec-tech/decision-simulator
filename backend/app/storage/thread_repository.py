@@ -524,7 +524,9 @@ async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any]
         if decision.pressure_test is None:
             weak_spots = await get_weak_spots(user_id)
             ai_roots = await pre_generate_roots(clarify_draft, weak_spots=weak_spots or None)
-            state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else _create_default_pressure_state()
+            if not ai_roots:
+                return None
+            state: dict[str, Any] = _build_v2_state(ai_roots)
             decision.pressure_test = state
             decision.updated_at = _now()
             await session.commit()
@@ -1779,7 +1781,7 @@ async def rebuild_thread(thread_id: str, user_id: str, lessons: list[str]) -> di
     # Pre-generate pressure test outside the session to avoid holding the connection
     weak_spots = await get_weak_spots(user_id)
     ai_roots = await pre_generate_roots(enriched_draft, weak_spots=weak_spots or None)
-    state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else _create_default_pressure_state()
+    state: dict[str, Any] = _build_v2_state(ai_roots) if ai_roots else {}
 
     async with get_async_session() as session:
         result = await session.execute(select(Decision).where(Decision.decision_id == new_thread_id))

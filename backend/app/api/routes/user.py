@@ -1,8 +1,10 @@
 from __future__ import annotations
+import json
 import logging
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from app.db.engine import get_async_session
 from app.models.decision import AggregatePattern, Decision, PatternContributionLog, PatternInstance, PatternProfile
 from app.config import settings
@@ -141,3 +143,60 @@ async def get_pattern_evidence(request: Request, slug: str) -> JSONResponse:
 
     evidence = [{"decision_id": did, "instances": items} for did, items in by_decision.items()]
     return JSONResponse({"slug": slug, "evidence": evidence})
+
+
+@router.get("/user/notifications")
+async def get_notifications(request: Request) -> JSONResponse:
+    """Return unrated decisions that are at least 7 days old, ordered by adjusted_score desc."""
+    user_id = request.state.user_id
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision.decision_id, Decision.title, Decision.created_at, Decision.adjusted_score)
+            .where(
+                Decision.user_id == user_id,
+                Decision.outcome_rating.is_(None),
+                Decision.created_at <= cutoff,
+            )
+            .order_by(Decision.adjusted_score.desc().nulls_last(), Decision.created_at.desc())
+            .limit(10)
+        )
+        rows = result.all()
+
+    notifications = [
+        {
+            "decision_id": r.decision_id,
+            "title": r.title or "Untitled Decision",
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "confidence": round(float(r.adjusted_score), 3) if r.adjusted_score is not None else None,
+        }
+        for r in rows
+    ]
+    return JSONResponse({"notifications": notifications})
+
+
+@router.post("/user/notifications/{decision_id}/rate")
+async def rate_notification(request: Request, decision_id: str) -> JSONResponse:
+    """Record yes/no outcome rating for a decision."""
+    user_id = request.state.user_id
+    try:
+        body = json.loads(await request.body())
+        helpful = body.get("helpful")
+        if not isinstance(helpful, bool):
+            return JSONResponse({"message": "helpful must be true or false"}, status_code=400)
+    except Exception:
+        return JSONResponse({"message": "Invalid payload"}, status_code=400)
+
+    async with get_async_session() as session:
+        result = await session.execute(
+            update(Decision)
+            .where(Decision.decision_id == decision_id, Decision.user_id == user_id)
+            .values(outcome_rating=helpful)
+            .returning(Decision.decision_id)
+        )
+        updated = result.first()
+        await session.commit()
+
+    if not updated:
+        return JSONResponse({"message": "Decision not found"}, status_code=404)
+    return JSONResponse({"decision_id": decision_id, "outcome_rating": helpful})
