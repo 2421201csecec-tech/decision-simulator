@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, MoreVertical } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,6 +69,7 @@ export function LeftPanel({
   onFailureAnalysis,
   onSimulation,
 }: LeftPanelProps) {
+  const router = useRouter();
   const navigationData = toNavSections(groupedThreads, selectedThreadId);
   const sectionByTitle: Record<string, ThreadRecord[]> = {
     "Active Decisions": groupedThreads.active,
@@ -99,7 +101,10 @@ export function LeftPanel({
         <ChevronLeft className="w-4 h-4" />
       </button>
 
-      <h2 className="text-base text-muted-foreground mb-4 tracking-wide">Sources</h2>
+      <div className="flex items-center mb-4" style={{ gap: '58px' }}>
+        <h2 className="text-base text-muted-foreground tracking-wide">Sources</h2>
+        <button onClick={() => router.push('/insights')} className="text-base text-muted-foreground tracking-wide transition-colors hover:text-foreground">Insight</button>
+      </div>
 
       <nav className="space-y-6">
         {navigationData.map((section, sectionIndex) => (

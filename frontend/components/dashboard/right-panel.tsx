@@ -378,21 +378,6 @@ export function RightPanel({
 
         {hasThread && <TickerHeader />}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="p-1 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary/50">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40 bg-card border-border">
-            <DropdownMenuItem className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary">
-              View Insights
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary">
-              Settings
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       {/* No thread selected */}

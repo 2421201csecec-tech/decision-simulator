@@ -636,10 +636,12 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
         </button>
         <div className="w-px h-4 bg-border/50" />
         <h2 className="text-base font-medium text-foreground">Decision Simulation</h2>
-        {options && winner && (
-          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Confidence: {confidence != null ? pct(confidence) : "—"}</span>
+        {options && winner && confidence != null && (
+          <div className="ml-auto flex items-center gap-2 text-xs">
+            <TrendingUp className="w-3.5 h-3.5" style={{ color: Math.round(confidence * 100) > 70 ? "#15803d" : Math.round(confidence * 100) >= 40 ? "#facc15" : "#ef4444" }} />
+            <span style={{ color: Math.round(confidence * 100) > 70 ? "#15803d" : Math.round(confidence * 100) >= 40 ? "#facc15" : "#ef4444" }}>
+              Confidence: {pct(confidence)}
+            </span>
           </div>
         )}
       </div>
@@ -704,7 +706,7 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
               <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase mb-1">Recommended Decision</p>
               <div className="flex items-end justify-between">
                 <p className="text-base font-medium text-foreground">{winner.label || winner.id}</p>
-                <p className="text-xl font-semibold text-accent tabular-nums">{winner.score.toFixed(3)}</p>
+                <p className="text-xl font-semibold text-accent tabular-nums mr-2">{Math.round(winner.score * 100)}%</p>
               </div>
             </div>
 

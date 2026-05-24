@@ -75,13 +75,7 @@ export function TopNav({ onLogoClick }: TopNavProps) {
 
         {/* Right: Notification and Profile */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/insights')}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-            title="Thinking Patterns"
-          >
-            <BrainCircuit className="w-5 h-5 rotate-90" />
-          </button>
+
           <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
             <Bell className="w-5 h-5" />
           </button>
