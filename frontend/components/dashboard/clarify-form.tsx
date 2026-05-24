@@ -8,6 +8,7 @@ interface UploadedFile {
   name: string;
   type: string;
   size: number;
+  status: "uploading" | "done" | "error";
 }
 
 interface ClarifyFormProps {
@@ -143,18 +144,31 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
     setAssumptions(assumptions.filter((_, i) => i !== index));
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newFiles: UploadedFile[] = Array.from(files).map((file) => ({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      }));
-      setUploadedFiles([...uploadedFiles, ...newFiles]);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    for (const file of files) {
+      const placeholder: UploadedFile = { name: file.name, type: file.type, size: file.size, status: threadId ? "uploading" : "error" };
+      setUploadedFiles((prev) => [...prev, placeholder]);
+      if (!threadId) continue;
+
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`/api/threads/${threadId}/upload`, { method: "POST", body: form });
+        setUploadedFiles((prev) =>
+          prev.map((f) => f.name === file.name && f.status === "uploading"
+            ? { ...f, status: res.ok ? "done" : "error" }
+            : f
+          )
+        );
+      } catch {
+        setUploadedFiles((prev) =>
+          prev.map((f) => f.name === file.name && f.status === "uploading" ? { ...f, status: "error" } : f)
+        );
+      }
     }
   };
 
@@ -171,11 +185,6 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
     return <File className="w-4 h-4 text-accent" />;
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-  };
 
   return (
     <div className="h-full flex flex-col p-6 overflow-y-auto scroll-container">
@@ -216,8 +225,31 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
           </div>
         </div>
         
-        {/* Add + Button for file upload */}
-        <div className="relative">
+        {/* File badges + Add button */}
+        <div className="flex items-center gap-2">
+          {uploadedFiles.map((file, index) => (
+            <div
+              key={index}
+              className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs group transition-colors ${
+                file.status === "error"
+                  ? "bg-destructive/10 border-destructive/40"
+                  : file.status === "done"
+                  ? "bg-secondary/50 border-accent/40"
+                  : "bg-secondary/50 border-border/50 opacity-70"
+              }`}
+            >
+              {getFileIcon(file.type)}
+              <span className="text-foreground/80 max-w-[100px] truncate">{file.name}</span>
+              {file.status !== "uploading" && (
+                <button
+                  onClick={() => handleRemoveFile(index)}
+                  className="p-0.5 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
           <input
             ref={fileInputRef}
             type="file"
@@ -225,7 +257,6 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
             accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
             onChange={handleFileUpload}
             className="hidden"
-            id="file-upload"
           />
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -235,31 +266,6 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
           </button>
         </div>
       </div>
-
-      {/* Uploaded Files */}
-      {uploadedFiles.length > 0 && (
-        <div className="mb-6 space-y-2">
-          <label className="text-xs text-muted-foreground">Attached Files</label>
-          <div className="flex flex-wrap gap-2">
-            {uploadedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-2 bg-secondary/50 border border-border/50 rounded-lg px-3 py-2 text-sm group"
-              >
-                {getFileIcon(file.type)}
-                <span className="text-foreground/80 max-w-[150px] truncate">{file.name}</span>
-                <span className="text-muted-foreground text-xs">({formatFileSize(file.size)})</span>
-                <button
-                  onClick={() => handleRemoveFile(index)}
-                  className="p-0.5 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Form */}
       <div className="flex-1 space-y-7 max-w-2xl mx-auto w-full">

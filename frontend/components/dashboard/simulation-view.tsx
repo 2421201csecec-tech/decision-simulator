@@ -724,11 +724,11 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
               const metrics = [
                 {
                   label: "Utility",
-                  value: caseValue(winner, caseView).toFixed(3),
+                  value: (caseValue(winner, caseView) * 100).toFixed(1) + "%",
                   sub: caseView === "aggressive" ? "Best 20% of outcomes" : caseView === "pessimistic" ? "Worst 20% of outcomes" : "Median outcome",
                 },
                 { label: "Downside probability", value: pct(winner.downside), sub: "Across all 10,000 runs" },
-                { label: "CVaR (tail risk)", value: winner.cvar.toFixed(3), sub: "Across all 10,000 runs" },
+                { label: "CVaR (tail risk)", value: (winner.cvar * 100).toFixed(1) + "%", sub: "Across all 10,000 runs" },
               ];
               return (
                 <div className="space-y-2">

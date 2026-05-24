@@ -99,6 +99,9 @@ async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None 
     else:
         failure_context_text = "(none)"
 
+    uploaded = (clarify_draft.get("uploaded_context") or "").strip()
+    document_context_text = uploaded[:4000] if uploaded else "(none)"
+
     template = (_PROMPT_DIR / "pre_generate_v1.0.0.txt").read_text(encoding="utf-8")
     prompt = _fill_template(
         template,
@@ -109,6 +112,7 @@ async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None 
         assumptions=", ".join(str(a) for a in assumptions) if assumptions else "(none)",
         weak_spots=weak_spots_text,
         failure_context=failure_context_text,
+        document_context=document_context_text,
     )
 
     temperature = 0.4

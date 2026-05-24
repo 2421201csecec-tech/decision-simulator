@@ -31,6 +31,7 @@ interface LeftPanelProps {
   onSelectThread?: (thread: ThreadRecord) => void;
   onFailureAnalysis?: (thread: ThreadRecord) => void;
   onSimulation?: (thread: ThreadRecord) => void;
+  onViewDecisionCard?: (thread: ThreadRecord) => void;
 }
 
 function toNavSections(grouped: GroupedThreads, selectedThreadId?: string | null): NavSection[] {
@@ -68,6 +69,7 @@ export function LeftPanel({
   onSelectThread,
   onFailureAnalysis,
   onSimulation,
+  onViewDecisionCard,
 }: LeftPanelProps) {
   const router = useRouter();
   const navigationData = toNavSections(groupedThreads, selectedThreadId);
@@ -134,47 +136,57 @@ export function LeftPanel({
                         <span>{item.label}</span>
                       </button>
                     ) : (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className={cn(
-                              "w-full text-left px-2 py-1.5 rounded-lg text-sm transition-colors group flex items-center justify-between",
-                              item.active
-                                ? "text-foreground font-medium bg-secondary/30"
-                                : "text-foreground/80 hover:bg-secondary/50"
-                            )}
-                          >
-                            <span className="flex-1">{item.label}</span>
-                            <MoreVertical className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const thread = sectionByTitle[section.title]?.[itemIndex];
-                              if (thread) onSelectThread?.(thread);
-                            }}
-                          >
-                            Open
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const thread = sectionByTitle[section.title]?.[itemIndex];
-                              if (thread) onSimulation?.(thread);
-                            }}
-                          >
-                            Run Simulation
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              const thread = sectionByTitle[section.title]?.[itemIndex];
-                              if (thread) onFailureAnalysis?.(thread);
-                            }}
-                          >
-                            Failure Analysis
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <div
+                        className={cn(
+                          "w-full px-2 py-1.5 rounded-lg text-sm transition-colors group flex items-center justify-between",
+                          item.active
+                            ? "text-foreground font-medium bg-secondary/30"
+                            : "text-foreground/80 hover:bg-secondary/50"
+                        )}
+                      >
+                        <button
+                          className="flex-1 text-left truncate"
+                          onClick={() => {
+                            const thread = sectionByTitle[section.title]?.[itemIndex];
+                            if (thread) onSelectThread?.(thread);
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const thread = sectionByTitle[section.title]?.[itemIndex];
+                                if (thread) onSimulation?.(thread);
+                              }}
+                            >
+                              Run Simulation
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const thread = sectionByTitle[section.title]?.[itemIndex];
+                                if (thread) onFailureAnalysis?.(thread);
+                              }}
+                            >
+                              Failure Analysis
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const thread = sectionByTitle[section.title]?.[itemIndex];
+                                if (thread) onViewDecisionCard?.(thread);
+                              }}
+                            >
+                              Decision Card
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     )}
                   </li>
                 ))}

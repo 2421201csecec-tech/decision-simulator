@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes.admin import router as admin_router
+from app.api.routes.upload import router as upload_router
 from app.api.routes.clarify_draft import router as clarify_draft_router
 from app.extraction.api import router as extraction_router
 from app.api.routes.decision_output import router as decision_output_router
@@ -97,3 +98,4 @@ app.include_router(export_router, prefix="/api/v1")
 app.include_router(extraction_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1/admin")
 app.include_router(user_router, prefix="/api/v1")
+app.include_router(upload_router, prefix="/api/v1")

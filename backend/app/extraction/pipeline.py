@@ -36,6 +36,8 @@ def compose_draft_input(draft: dict) -> str:
         parts.append(f"Constraints: {'; '.join(draft['constraints'])}")
     if draft.get("assumptions"):
         parts.append(f"My assumptions: {'; '.join(draft['assumptions'])}")
+    if draft.get("uploaded_context"):
+        parts.append(f"\n--- Uploaded Document (use figures, names, and facts from this as ground truth) ---\n{draft['uploaded_context']}\n---")
     return "\n".join(parts)
 
 # ---------------------------------------------------------------------------

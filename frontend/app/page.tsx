@@ -5,6 +5,7 @@ import { TopNav } from "@/components/dashboard/top-nav";
 import { LeftPanel } from "@/components/dashboard/left-panel";
 import { CenterPanel } from "@/components/dashboard/center-panel";
 import { RightPanel } from "@/components/dashboard/right-panel";
+import DecisionCardView from "@/components/dashboard/decision-card-view";
 import { cn } from "@/lib/utils";
 import {
   analyzeDraft,
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [pressureTestState, setPressureTestState] = useState<PressureTestState | null>(null);
   const [extractionSchema, setExtractionSchema] = useState<Record<string, unknown> | null>(null);
   const [failureInsights, setFailureInsights] = useState<{ likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; } | null>(null);
+  const [decisionCardModalThreadId, setDecisionCardModalThreadId] = useState<string | null>(null);
   const autosaveResetTimerRef = useRef<number | null>(null);
   const lastAutosavedByThreadRef = useRef<Record<string, string>>({});
 
@@ -316,6 +318,9 @@ export default function Dashboard() {
               setView("simulation");
               setRightCollapsed(true);
             }}
+            onViewDecisionCard={(thread) => {
+              setDecisionCardModalThreadId(thread.id);
+            }}
           />
           </div>
 
@@ -365,6 +370,26 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Decision Card Modal */}
+      {decisionCardModalThreadId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backdropFilter: "blur(6px)", background: "rgba(0,0,0,0.35)" }}
+          onClick={() => setDecisionCardModalThreadId(null)}
+        >
+          <div
+            className="relative w-[calc(100vw-640px)] min-w-[600px] max-h-[90vh] overflow-y-auto rounded-2xl border border-border/50 bg-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DecisionCardView
+              threadId={decisionCardModalThreadId}
+              onBack={() => setDecisionCardModalThreadId(null)}
+              onFailureAnalysis={() => setDecisionCardModalThreadId(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

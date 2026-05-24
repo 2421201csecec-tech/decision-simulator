@@ -236,6 +236,25 @@ async def get_thread_by_id(thread_id: str, user_id: str) -> dict[str, Any] | Non
 # Clarify draft
 # ---------------------------------------------------------------------------
 
+async def patch_clarify_draft_field(thread_id: str, user_id: str, key: str, value: Any) -> None:
+    """Merge a single key into clarify_draft without wiping other fields."""
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(
+                Decision.decision_id == thread_id,
+                (Decision.user_id == user_id) | (Decision.user_id.is_(None)),
+            )
+        )
+        decision = result.scalar_one_or_none()
+        if decision is None:
+            return
+        draft = dict(decision.clarify_draft or {})
+        draft[key] = value
+        decision.clarify_draft = draft
+        decision.updated_at = _now()
+        await session.commit()
+
+
 async def save_clarify_draft(thread_id: str, draft: dict[str, Any], user_id: str) -> dict[str, Any] | None:
     async with get_async_session() as session:
         result = await session.execute(

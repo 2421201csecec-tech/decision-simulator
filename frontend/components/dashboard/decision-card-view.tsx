@@ -168,10 +168,6 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
             Back
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full" style={{ background: '#c9b896' }} />
-          <span className="text-sm font-semibold" style={{ color: '#c9b896' }}>Eidoz</span>
-        </div>
       </div>
 
       {loading ? (

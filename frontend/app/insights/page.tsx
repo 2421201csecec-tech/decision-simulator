@@ -194,7 +194,7 @@ export default function InsightsPage() {
           {/* Header */}
           <div className="px-8 pt-8 pb-5 shrink-0 flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)', letterSpacing: '0.35em' }}>
+              <h1 className="text-3xl font-medium" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)', letterSpacing: '0.25em' }}>
                 INSIGHT
               </h1>
               <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>

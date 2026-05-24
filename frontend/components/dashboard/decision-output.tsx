@@ -274,16 +274,6 @@ export function DecisionOutput({ threadId, onBack, onRunSimulation, onStartRevis
             <RotateCcw className="w-4 h-4" />
             Start Revision
           </button>
-          <button
-            onClick={onViewDecisionCard}
-            className="flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-medium transition-colors"
-            style={{ background: 'rgba(201,184,150,0.08)', borderColor: 'rgba(201,184,150,0.3)', color: '#c9b896' }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(201,184,150,0.14)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(201,184,150,0.08)')}
-          >
-            <LayoutTemplate className="w-4 h-4" />
-            Decision Card
-          </button>
         </div>
 
         {error && <p className="text-xs text-destructive">{error}</p>}
