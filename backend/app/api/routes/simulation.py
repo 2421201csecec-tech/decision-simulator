@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
+from app.config import settings
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -159,7 +160,7 @@ async def summarize_labels(req: LabelRequest) -> JSONResponse:
     )
 
     try:
-        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=200)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=200, model=settings.llm_fallback_model)
         raw = raw.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]

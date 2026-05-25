@@ -17,6 +17,7 @@ interface PressureTestProps {
   onBack: () => void;
   onSubmitFinal: () => void;
   onStateChange?: (state: PressureTestState | null) => void;
+  onAnswerChange?: (text: string) => void;
 }
 
 const VECTOR_LABELS: Record<string, string> = {
@@ -31,7 +32,7 @@ const VECTOR_COLORS: Record<string, string> = {
   external: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
-export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange }: PressureTestProps) {
+export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, onAnswerChange }: PressureTestProps) {
   const [pressureState, setPressureState] = useState<PressureTestState | null>(null);
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(true);
@@ -75,7 +76,10 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange }:
 
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
-    if (countWords(text) <= maxWords) setAnswer(text);
+    if (countWords(text) <= maxWords) {
+      setAnswer(text);
+      onAnswerChange?.(text);
+    }
   };
 
   useEffect(() => {

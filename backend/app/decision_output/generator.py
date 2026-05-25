@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from app.extraction.passes.llm_client import call_llm
+from app.config import settings
 
 logger = logging.getLogger("decision_output.generator")
 
@@ -104,7 +105,7 @@ async def generate_decision_output(
 
     try:
         prompt = _build_prompt(extraction_schema, qa_pairs, thread_context=thread_context)
-        raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=1500)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=1500, model=settings.llm_fallback_model)
         parsed = json.loads(_clean_fences(raw))
 
         if not _REQUIRED_KEYS.issubset(parsed.keys()):

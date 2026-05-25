@@ -83,7 +83,7 @@ export async function proxyRequestToCoreBackend(options: ProxyRequestOptions): P
       init.body = await options.request.clone().text();
     }
 
-    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(25_000) });
+    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(120_000) });
     return await toNextResponse(response);
   } catch (err) {
     console.error("[proxy] backend unreachable", {

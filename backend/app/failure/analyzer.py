@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from app.extraction.passes.llm_client import call_llm
+from app.config import settings
 
 logger = logging.getLogger("failure.analyzer")
 
@@ -55,7 +56,7 @@ async def analyze_gaps(snapshot: dict, intake: dict) -> dict | None:
     )
 
     try:
-        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=800)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=800, model=settings.llm_fallback_model)
         parsed = json.loads(_clean_fences(raw))
     except Exception:
         logger.warning("gap_analysis LLM call failed", exc_info=True)
@@ -105,7 +106,7 @@ async def extract_lessons(gap_analysis: dict, existing_patterns: list) -> list:
     )
 
     try:
-        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=600)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=600, model=settings.llm_fallback_model)
         parsed = json.loads(_clean_fences(raw))
     except Exception:
         logger.warning("lesson_extraction LLM call failed", exc_info=True)

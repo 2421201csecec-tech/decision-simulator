@@ -101,11 +101,14 @@ async def post_extract(thread_id: str, request: Request) -> JSONResponse:
         return JSONResponse({"message": "Clarify draft is empty"}, status_code=400)
 
     from app.extraction.passes.llm_client import LLMError
+    from app.extraction.pipeline import ExtractionError
     user_input = compose_draft_input(clarify_draft)
     try:
         result = await run_extraction(user_input, user_id=user_id, decision_id=thread_id)
     except LLMError:
         return JSONResponse({"message": "AI service is rate-limited, please try again in a moment."}, status_code=503)
+    except ExtractionError as exc:
+        return JSONResponse({"message": f"Extraction failed: {exc}"}, status_code=422)
 
     if result.get("status") == "clarification_needed":
         return JSONResponse({"message": "Clarification needed", "detail": result}, status_code=409)

@@ -40,7 +40,7 @@ class Enricher:
                 user_input=user_input,
                 memory_schemas=json.dumps((memory_schemas or [])[:3], indent=2),
             )
-            raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=_MAX_TOKENS)
+            raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=_MAX_TOKENS, model=settings.llm_fallback_model)
 
             raw = raw.strip()
             if raw.startswith("```"):

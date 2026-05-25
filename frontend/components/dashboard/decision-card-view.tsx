@@ -159,6 +159,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
+            aria-label="Go back to previous screen"
             className="flex items-center gap-1.5 text-xs transition-colors"
             style={{ color: 'rgba(201,184,150,0.6)' }}
             onMouseEnter={(e) => (e.currentTarget.style.color = '#c9b896')}
@@ -171,21 +172,22 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
       </div>
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center" role="status" aria-live="polite">
           <p className="text-sm" style={{ color: 'rgba(201,184,150,0.5)' }}>Loading decision…</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-8 py-10">
-          {/* ── Tree card ── */}
-          <div
-            ref={cardRef}
-            className="relative w-full rounded-3xl border"
-            style={{ borderColor: 'rgba(201,184,150,0.15)', background: '#120d08' }}
-          >
+        <div className="flex-1 overflow-auto px-4 md:px-8 py-10">
+          <div className="min-w-[900px] w-full max-w-7xl mx-auto">
+            {/* ── Tree card ── */}
+            <div
+              ref={cardRef}
+              className="relative w-full rounded-3xl border"
+              style={{ borderColor: 'rgba(201,184,150,0.15)', background: '#120d08' }}
+            >
             <div className="relative px-10 pt-16 pb-10 flex flex-col">
               {/* Title + subheading — top left */}
               <div className="absolute top-5 left-6">
-                <p className="text-xl font-bold" style={{ color: '#f0d898' }}>Decision Card</p>
+                <h1 className="text-xl font-bold" style={{ color: '#f0d898' }}>Decision Card</h1>
                 <p className="text-sm mt-0.5" style={{ color: '#c9b896' }}>Map your thinking. Make better decisions.</p>
               </div>
 
@@ -209,7 +211,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
                   className="rounded-2xl border px-6 py-3 text-center"
                   style={{ background: '#1a1610', borderColor: 'rgba(201,184,150,0.85)', borderWidth: '2.5px', boxShadow: '0 0 18px rgba(201,184,150,0.35), 0 0 40px rgba(201,184,150,0.15)', minWidth: '28%', maxWidth: '40%' }}
                 >
-                  <p className="uppercase font-bold mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.15em', color: '#c9b896', textShadow: '0 0 6px rgba(201,184,150,0.4)' }}>Decision Title</p>
+                  <h2 className="uppercase font-bold mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.15em', color: '#c9b896', textShadow: '0 0 6px rgba(201,184,150,0.4)' }}>Decision Title</h2>
                   <p className="text-xl font-semibold" style={{ color: '#f0d898', fontFamily: 'var(--font-serif)', textShadow: '0 0 12px rgba(201,184,150,0.7), 0 0 28px rgba(201,184,150,0.35)' }}>{title}</p>
                 </div>
               </div>
@@ -330,12 +332,14 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
               <p className="text-base font-semibold" style={{ color: '#c9b896' }}>Decide better.</p>
             </div>
           </div>
+          </div>
 
           {/* Download button */}
           <div className="flex items-center justify-center mt-6 pb-4">
             <button
               onClick={handleDownload}
               disabled={downloading}
+              aria-label="Download decision card as PNG"
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-medium transition-colors"
               style={{ background: '#1a1610', borderColor: 'rgba(201,184,150,0.3)', color: '#c9b896', opacity: downloading ? 0.6 : 1 }}
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(201,184,150,0.6)')}

@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from app.extraction.passes.llm_client import call_llm
+from app.config import settings
 
 logger = logging.getLogger("pressure_test.synthesizer")
 
@@ -71,7 +72,7 @@ async def synthesize_pressure_test(
     )
 
     try:
-        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=350)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=350, model=settings.llm_fallback_model)
         data = json.loads(_clean_fences(raw))
         return {
             "what_founder_believed": list(data.get("what_founder_believed") or [])[:3],

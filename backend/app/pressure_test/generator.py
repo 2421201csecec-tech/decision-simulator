@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from app.extraction.passes.llm_client import call_llm
+from app.config import settings
 
 logger = logging.getLogger("pressure_test.generator")
 
@@ -166,6 +167,7 @@ async def generate_follow_up(
             prompt,
             temperature=0.3,
             max_tokens=60,
+            model=settings.llm_fallback_model,
         )
         follow_up = raw.strip().strip('"').strip()
         return follow_up if len(follow_up) > 10 else None

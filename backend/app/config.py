@@ -12,9 +12,9 @@ class Settings:
     database_url: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./dev.db").strip()
 
     # LLM
-    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
-    llm_primary_model: str = os.getenv("LLM_PRIMARY_MODEL", "llama-3.3-70b-versatile")
-    llm_fallback_model: str = os.getenv("LLM_FALLBACK_MODEL", "llama-3.1-8b-instant")
+    anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
+    llm_primary_model: str = os.getenv("LLM_PRIMARY_MODEL", "claude-sonnet-4-6")
+    llm_fallback_model: str = os.getenv("LLM_FALLBACK_MODEL", "claude-haiku-4-5-20251001")
     llm_timeout_seconds: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "25"))
 
     # Extraction

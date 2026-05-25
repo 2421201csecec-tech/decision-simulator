@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 from app.extraction.passes.llm_client import call_llm
+from app.config import settings
 
 logger = logging.getLogger("simulation.explainer")
 
@@ -191,7 +192,7 @@ async def generate_explanation(
     )
 
     try:
-        raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=1000)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=1800, model=settings.llm_fallback_model)
         logger.info("simulation explanation raw LLM output:\n%s", raw)
         parsed = json.loads(_clean_fences(raw))
 

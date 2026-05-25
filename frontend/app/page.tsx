@@ -8,7 +8,6 @@ import { RightPanel } from "@/components/dashboard/right-panel";
 import DecisionCardView from "@/components/dashboard/decision-card-view";
 import { cn } from "@/lib/utils";
 import {
-  analyzeDraft,
   createThread,
   fetchClarifyDraft,
   fetchGroupedThreads,
@@ -18,7 +17,6 @@ import {
   saveClarifyDraft,
   triggerExtraction,
   type ClarifyDraft,
-  type DraftInsights,
   type GroupedThreads,
   type PressureTestState,
   type ThreadRecord,
@@ -51,12 +49,12 @@ export default function Dashboard() {
   const [autosaveStatus, setAutosaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [reentryContext, setReentryContext] = useState<{ failedTitle: string; failedLessons: string[] } | null>(null);
   const [uiError, setUiError] = useState<string | null>(null);
-  const [clarifyInsights, setClarifyInsights] = useState<DraftInsights | null>(null);
-  const [isAnalyzingDraft, setIsAnalyzingDraft] = useState(false);
   const [pressureTestState, setPressureTestState] = useState<PressureTestState | null>(null);
   const [extractionSchema, setExtractionSchema] = useState<Record<string, unknown> | null>(null);
   const [failureInsights, setFailureInsights] = useState<{ likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; } | null>(null);
   const [decisionCardModalThreadId, setDecisionCardModalThreadId] = useState<string | null>(null);
+  const [pressureTestAnswer, setPressureTestAnswer] = useState("");
+  const [failureRawInput, setFailureRawInput] = useState("");
   const autosaveResetTimerRef = useRef<number | null>(null);
   const lastAutosavedByThreadRef = useRef<Record<string, string>>({});
 
@@ -185,19 +183,6 @@ export default function Dashboard() {
     }
   }, [selectedThreadId]);
 
-  const handleDraftChange = useCallback(async (data: DecisionData) => {
-    setIsAnalyzingDraft(true);
-    const insights = await analyzeDraft({
-      title: data.title,
-      core_problem: data.coreProblem,
-      context: data.context,
-      constraints: data.constraints,
-      assumptions: data.assumptions,
-    });
-    setClarifyInsights(insights);
-    setIsAnalyzingDraft(false);
-  }, []);
-
   const handleSubmitFinal = useCallback(() => {
     setView("decision-output");
     if (selectedThreadId) {
@@ -267,6 +252,8 @@ export default function Dashboard() {
     setUiError(null);
     setAutosaveStatus("idle");
     setSelectedThreadId(thread.id);
+    // Pre-fill immediately from the thread object so the form mounts with data
+    setDecisionData((thread.clarifyDraft as ClarifyDraft) || null);
     setView("clarify");
 
     try {
@@ -332,7 +319,6 @@ export default function Dashboard() {
             onBack={handleBack}
             onContinue={handleContinue}
             onAutosaveClarify={handleAutosaveClarify}
-            onDraftChange={handleDraftChange}
             autosaveStatus={autosaveStatus}
             onSubmitFinal={handleSubmitFinal}
             onRunSimulation={handleRunSimulation}
@@ -344,6 +330,8 @@ export default function Dashboard() {
             onPressureStateChange={setPressureTestState}
             reentryContext={reentryContext}
             onFailureAnalysisComplete={setFailureInsights}
+            onPressureAnswerChange={setPressureTestAnswer}
+            onFailureRawInputChange={setFailureRawInput}
           />
 
           {/* Right Panel - AI Insights */}
@@ -360,12 +348,12 @@ export default function Dashboard() {
               onToggleCollapse={() => setRightCollapsed(!rightCollapsed)}
               onRunSimulation={handleRunSimulation}
               onStartRevision={handleStartRevision}
-              clarifyInsights={clarifyInsights}
-              isAnalyzingDraft={isAnalyzingDraft}
               pressureTestState={pressureTestState}
               extractionSchema={extractionSchema}
               clarifyDraft={decisionData}
               failureInsights={failureInsights}
+              pressureTestAnswer={pressureTestAnswer}
+              failureRawInput={failureRawInput}
             />
           </div>
         </div>

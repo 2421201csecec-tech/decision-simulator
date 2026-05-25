@@ -117,7 +117,7 @@ async def run_pass2(
 
     start = time.monotonic()
     raw, model_used, tokens_in, tokens_out = await call_llm(
-        prompt, temperature=0.1, max_tokens=_MAX_TOKENS
+        prompt, temperature=0.1, max_tokens=_MAX_TOKENS, model=settings.llm_fallback_model
     )
     latency_ms = int((time.monotonic() - start) * 1000)
 

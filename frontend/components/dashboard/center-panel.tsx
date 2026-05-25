@@ -49,7 +49,6 @@ interface CenterPanelProps {
   onBack: () => void;
   onContinue: (data: any) => void;
   onAutosaveClarify?: (data: any) => Promise<void> | void;
-  onDraftChange?: (data: any) => void;
   autosaveStatus?: "idle" | "saving" | "saved" | "error";
   onSubmitFinal: () => void;
   onRunSimulation?: () => void;
@@ -61,9 +60,11 @@ interface CenterPanelProps {
   onPressureStateChange?: (state: any) => void;
   reentryContext?: { failedTitle: string; failedLessons: string[] } | null;
   onFailureAnalysisComplete?: (data: { likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; }) => void;
+  onPressureAnswerChange?: (text: string) => void;
+  onFailureRawInputChange?: (text: string) => void;
 }
 
-export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, onDraftChange, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onViewDecisionCard, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext, onFailureAnalysisComplete }: CenterPanelProps) {
+export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, onContinue, onAutosaveClarify, autosaveStatus, onSubmitFinal, onRunSimulation, onStartRevision, onViewDecisionCard, onRebuildDecision, decisionData, selectedFailedDecision, onPressureStateChange, reentryContext, onFailureAnalysisComplete, onPressureAnswerChange, onFailureRawInputChange }: CenterPanelProps) {
   if (view === "clarify") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
@@ -72,7 +73,6 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           onBack={onBack}
           onContinue={onContinue}
           onAutosave={onAutosaveClarify}
-          onDraftChange={onDraftChange}
           autosaveStatus={autosaveStatus}
           initialData={decisionData}
           reentryContext={reentryContext}
@@ -84,7 +84,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
   if (view === "pressure-test") {
     return (
       <main className="flex-1 h-full bg-card rounded-2xl border border-border/50 overflow-hidden">
-        <PressureTest threadId={selectedThreadId} onBack={onBack} onSubmitFinal={onSubmitFinal} onStateChange={onPressureStateChange} />
+        <PressureTest threadId={selectedThreadId} onBack={onBack} onSubmitFinal={onSubmitFinal} onStateChange={onPressureStateChange} onAnswerChange={onPressureAnswerChange} />
       </main>
     );
   }
@@ -132,6 +132,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
           onBack={onBack}
           onRebuild={onRebuildDecision || ((_ctx) => {})}
           onAnalysisComplete={onFailureAnalysisComplete}
+          onRawInputChange={onFailureRawInputChange}
         />
       </main>
     );

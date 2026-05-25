@@ -17,6 +17,7 @@ interface DiagnoseFailureProps {
   onBack: () => void;
   onRebuild: (context: { failedTitle: string; failedLessons: string[] }) => void;
   onAnalysisComplete?: (data: { likelyRootCause: string; cognitiveBias: string; missedVariable: string; recommendation: string; }) => void;
+  onRawInputChange?: (text: string) => void;
 }
 
 type Step = 0 | 1 | 2 | 3 | 4 | "analyzing" | 5 | 6;
@@ -54,7 +55,7 @@ function VerdictBadge({ verdict }: { verdict: AssumptionGap["verdict"] }) {
   );
 }
 
-export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, onAnalysisComplete }: DiagnoseFailureProps) {
+export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, onAnalysisComplete, onRawInputChange }: DiagnoseFailureProps) {
   const [step, setStep] = useState<Step>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -286,7 +287,10 @@ export function DiagnoseFailure({ threadId, failedDecision, onBack, onRebuild, o
           <label className="text-base text-foreground/70 leading-snug">{current.label}</label>
           <textarea
             value={current.value}
-            onChange={(e) => current.setter(e.target.value)}
+            onChange={(e) => {
+              current.setter(e.target.value);
+              onRawInputChange?.([whatDid, expectedOutcome, whatHappened, biggestSurprise, e.target.value].filter(Boolean).join(" "));
+            }}
             autoFocus
             placeholder="Write your answer here…"
             className="w-full bg-secondary/50 border border-border/50 rounded-lg px-4 py-4 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50 resize-none transition-all"

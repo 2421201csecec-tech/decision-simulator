@@ -16,7 +16,6 @@ interface ClarifyFormProps {
   onBack: () => void;
   onContinue: (data: any) => void;
   onAutosave?: (data: any) => Promise<void> | void;
-  onDraftChange?: (data: any) => void;
   autosaveStatus?: "idle" | "saving" | "saved" | "error";
   initialData?: {
     title?: string;
@@ -29,7 +28,7 @@ interface ClarifyFormProps {
   reentryContext?: { failedTitle: string; failedLessons: string[] } | null;
 }
 
-export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftChange, autosaveStatus = "idle", initialData, reentryContext }: ClarifyFormProps) {
+export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosaveStatus = "idle", initialData, reentryContext }: ClarifyFormProps) {
   const [title, setTitle] = useState(
     initialData?.title && initialData.title !== "Untitled Decision" && initialData.title !== "Untitled n"
       ? initialData.title
@@ -49,6 +48,22 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
   const hasMountedRef = useRef(false);
   const lastQueuedPayloadRef = useRef<string>("");
   const preGeneratedRef = useRef(false);
+  const initializedThreadRef = useRef<string | null | undefined>(null);
+
+  // When threadId changes and initialData arrives, re-sync form fields
+  useEffect(() => {
+    if (!initialData || initializedThreadRef.current === threadId) return;
+    initializedThreadRef.current = threadId;
+    setTitle(
+      initialData.title && initialData.title !== "Untitled Decision" && initialData.title !== "Untitled n"
+        ? initialData.title : ""
+    );
+    setCoreProblem(initialData.coreProblem || "");
+    setDesiredOutcome(initialData.desiredOutcome || "");
+    setContext(initialData.context || "");
+    setConstraints(initialData.constraints || []);
+    setAssumptions(initialData.assumptions || []);
+  }, [threadId, initialData]);
 
   const draftPayload = useMemo(
     () => ({
@@ -100,16 +115,6 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
     return () => window.clearTimeout(timer);
   }, [draftPayload, onAutosave]);
 
-  useEffect(() => {
-    if (!onDraftChange) return;
-    if (title.length < 6 || coreProblem.length < 15) return;
-
-    const timer = window.setTimeout(() => {
-      onDraftChange(draftPayload);
-    }, 1500);
-
-    return () => window.clearTimeout(timer);
-  }, [draftPayload, onDraftChange, title.length, coreProblem.length]);
 
   const autosaveLabel =
     autosaveStatus === "saving"
@@ -457,7 +462,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, onDraftC
               }
               onContinue(draftPayload);
             }}
-            disabled={!title.trim() || !coreProblem.trim() || !context.trim()}
+            disabled={!title.trim() || !coreProblem.trim()}
             className="px-6 py-2.5 rounded-full text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ background: 'var(--accent)', color: 'var(--accent-foreground)', boxShadow: '0 4px 20px color-mix(in srgb, var(--accent) 25%, transparent)' }}
           >

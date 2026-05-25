@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
 
-from groq import AsyncGroq, RateLimitError, APIStatusError
+from anthropic import AsyncAnthropic, RateLimitError, APIStatusError
 
 from app.config import settings
 
@@ -15,14 +14,14 @@ class LLMError(Exception):
     pass
 
 
-_groq_client: AsyncGroq | None = None
+_anthropic_client: AsyncAnthropic | None = None
 
 
-def _client() -> AsyncGroq:
-    global _groq_client
-    if _groq_client is None:
-        _groq_client = AsyncGroq(api_key=settings.groq_api_key)
-    return _groq_client
+def _client() -> AsyncAnthropic:
+    global _anthropic_client
+    if _anthropic_client is None:
+        _anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
+    return _anthropic_client
 
 
 async def call_llm(
@@ -32,7 +31,7 @@ async def call_llm(
     max_tokens: int = 2000,
     model: str | None = None,
 ) -> tuple[str, str, int, int]:
-    """Call Groq with primary model, fall back to secondary on rate-limit or error.
+    """Call Anthropic with primary model, fall back to secondary on rate-limit or error.
 
     Returns (raw_text, model_used, tokens_in, tokens_out).
     Raises LLMError if both models fail.
@@ -44,7 +43,7 @@ async def call_llm(
     for attempt, current_model in enumerate([primary, fallback]):
         try:
             response = await asyncio.wait_for(
-                _client().chat.completions.create(
+                _client().messages.create(
                     model=current_model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=temperature,
@@ -52,9 +51,9 @@ async def call_llm(
                 ),
                 timeout=timeout,
             )
-            content = response.choices[0].message.content or ""
-            tokens_in = response.usage.prompt_tokens if response.usage else 0
-            tokens_out = response.usage.completion_tokens if response.usage else 0
+            content = response.content[0].text if response.content else ""
+            tokens_in = response.usage.input_tokens
+            tokens_out = response.usage.output_tokens
             return content, current_model, tokens_in, tokens_out
 
         except RateLimitError:

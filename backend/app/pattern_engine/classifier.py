@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from app.pattern_engine.constants import ENABLE_BEHAVIORAL_PATTERNS
+from app.config import settings
 
 logger = logging.getLogger("pattern_engine.classifier")
 
@@ -48,7 +49,7 @@ async def classify_inputs_batch(
 
     try:
         from app.extraction.passes.llm_client import call_llm
-        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=500)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.2, max_tokens=500, model=settings.llm_fallback_model)
         result = _parse_batch_response(raw, inputs)
         logger.info("pattern_classify_ok source=%s count=%d", source, len(result))
         return result

@@ -11,9 +11,10 @@ interface Params {
 }
 
 const BACKEND_URL = process.env.CORE_BACKEND_URL?.replace(/\/$/, "") ?? "";
-const BACKEND_TIMEOUT_MS = 25_000;
+const FAST_TIMEOUT_MS = 25_000;
+const LLM_TIMEOUT_MS = 120_000;
 
-async function callBackend(path: string, body: unknown, accessToken?: string): Promise<unknown | null> {
+async function callBackend(path: string, body: unknown, accessToken?: string, timeoutMs = FAST_TIMEOUT_MS): Promise<unknown | null> {
   try {
     const headers: HeadersInit = { "content-type": "application/json" };
     if (accessToken) headers["authorization"] = `Bearer ${accessToken}`;
@@ -22,7 +23,7 @@ async function callBackend(path: string, body: unknown, accessToken?: string): P
       headers,
       body: JSON.stringify(body),
       cache: "no-store",
-      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -40,7 +41,7 @@ async function fetchBackendSimulationState(threadId: string, accessToken?: strin
     const res = await fetch(`${BACKEND_URL}/api/v1/threads/${threadId}/simulation`, {
       cache: "no-store",
       headers,
-      signal: AbortSignal.timeout(BACKEND_TIMEOUT_MS),
+      signal: AbortSignal.timeout(FAST_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     return (await res.json()) as Record<string, unknown>;
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           simulation: simResult,
           user_values: userValues,
           thread_id: threadId,
-        }, accessToken) as Record<string, unknown> | null;
+        }, accessToken, LLM_TIMEOUT_MS) as Record<string, unknown> | null;
 
         return NextResponse.json({ run: scored ?? simResult }, { status: 201 });
       }

@@ -68,7 +68,7 @@ async def analyze_draft(req: AnalyzeDraftRequest):
             assumptions=", ".join(req.assumptions) if req.assumptions else "(none)",
         )
 
-        raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=600)
+        raw, _, _, _ = await call_llm(prompt, temperature=0.3, max_tokens=600, model=settings.llm_fallback_model)
 
         raw = raw.strip()
         if raw.startswith("```"):
