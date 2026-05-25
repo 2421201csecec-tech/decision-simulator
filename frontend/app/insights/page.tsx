@@ -173,6 +173,12 @@ export default function InsightsPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
+      <style>{`
+        .evidence-scroll::-webkit-scrollbar { width: 3px; }
+        .evidence-scroll::-webkit-scrollbar-track { background: transparent; }
+        .evidence-scroll::-webkit-scrollbar-thumb { background: rgba(201,184,150,0.25); border-radius: 99px; }
+        .evidence-scroll::-webkit-scrollbar-thumb:hover { background: rgba(201,184,150,0.45); }
+      `}</style>
       <TopNav onLogoClick={() => router.push('/')} />
 
       <div className="pt-16 h-screen">
@@ -404,38 +410,42 @@ export default function InsightsPage() {
                 </div>
 
                 {/* Evidence */}
-                <div className="flex-1 overflow-y-auto px-7 py-5" style={{ minHeight: 0 }}>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-center" style={{ color: GOLD }}>Evidence</p>
-                  {evidenceLoading ? (
-                    <p className="text-sm text-center" style={{ color: 'var(--muted-foreground)' }}>Loading evidence…</p>
-                  ) : allInstances.length === 0 ? (
-                    <p className="text-sm text-center" style={{ color: 'var(--muted-foreground)' }}>No evidence recorded yet.</p>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${evidenceCols}, 1fr)`, gap: 12 }}>
-                    {allInstances.map((inst, i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl p-4"
-                        style={{ background: 'rgba(201,184,150,0.04)', border: '1px solid rgba(201,184,150,0.12)' }}
-                      >
-                        <p className="text-sm leading-relaxed text-center" style={{ color: 'var(--foreground)' }}>
-                          "{inst.raw_text}"
-                        </p>
-                        <div className="flex items-center justify-center gap-2 mt-2">
-                          <span
-                            className="text-xs px-2 py-0.5 rounded-full"
-                            style={{ background: 'rgba(201,184,150,0.1)', color: GOLD, border: '1px solid rgba(201,184,150,0.2)' }}
+                <div className="relative flex-1 min-h-0">
+                  <div className="evidence-scroll h-full overflow-y-auto px-7 py-5" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(201,184,150,0.25) transparent' }}>
+                    <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-center" style={{ color: GOLD }}>Evidence</p>
+                    {evidenceLoading ? (
+                      <p className="text-sm text-center" style={{ color: 'var(--muted-foreground)' }}>Loading evidence…</p>
+                    ) : allInstances.length === 0 ? (
+                      <p className="text-sm text-center" style={{ color: 'var(--muted-foreground)' }}>No evidence recorded yet.</p>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${evidenceCols}, 1fr)`, gap: 12 }}>
+                        {allInstances.map((inst, i) => (
+                          <div
+                            key={i}
+                            className="rounded-xl p-4"
+                            style={{ background: 'rgba(201,184,150,0.04)', border: '1px solid rgba(201,184,150,0.12)' }}
                           >
-                            {SOURCE_LABEL[inst.source] ?? inst.source}
-                          </span>
-                          <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                            {FIELD_LABEL[inst.field_type] ?? inst.field_type}
-                          </span>
-                        </div>
+                            <p className="text-sm leading-relaxed text-center" style={{ color: 'var(--foreground)' }}>
+                              "{inst.raw_text}"
+                            </p>
+                            <div className="flex items-center justify-center gap-2 mt-2">
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ background: 'rgba(201,184,150,0.1)', color: GOLD, border: '1px solid rgba(201,184,150,0.2)' }}
+                              >
+                                {SOURCE_LABEL[inst.source] ?? inst.source}
+                              </span>
+                              <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                                {FIELD_LABEL[inst.field_type] ?? inst.field_type}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  {/* Fade hint at bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 h-8 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, #0f0b07)' }} />
                 </div>
 
                 {/* Footer */}
@@ -488,8 +498,8 @@ export default function InsightsPage() {
                   patterns.map((p) => (
                     <span
                       key={p.slug}
-                      className="text-xs px-3 py-1.5"
-                      style={{ background: 'rgba(201,184,150,0.08)', color: GOLD, border: '1px solid rgba(201,184,150,0.2)', borderRadius: 20 }}
+                      className="text-sm px-4 py-2"
+                      style={{ background: '#000000', color: GOLD, border: '1px solid rgba(201,184,150,0.7)', borderRadius: 20 }}
                     >
                       {formatSlug(p.name || p.slug)}
                     </span>

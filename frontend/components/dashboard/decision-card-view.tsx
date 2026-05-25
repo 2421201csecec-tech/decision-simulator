@@ -154,6 +154,13 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
       className="w-full h-full flex flex-col overflow-hidden"
       style={{ background: '#0f0b07', fontFamily: 'var(--font-sans)' }}
     >
+      <style>{`
+        .decision-card-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .decision-card-scroll::-webkit-scrollbar-track { background: transparent; }
+        .decision-card-scroll::-webkit-scrollbar-thumb { background: rgba(201,184,150,0.2); border-radius: 99px; }
+        .decision-card-scroll::-webkit-scrollbar-thumb:hover { background: rgba(201,184,150,0.45); }
+        .decision-card-scroll::-webkit-scrollbar-corner { background: transparent; }
+      `}</style>
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-4 shrink-0" style={{ borderBottom: '1px solid rgba(201,184,150,0.12)' }}>
         <div className="flex items-center gap-4">
@@ -176,8 +183,8 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
           <p className="text-sm" style={{ color: 'rgba(201,184,150,0.5)' }}>Loading decision…</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto px-4 md:px-8 py-10">
-          <div className="min-w-[900px] w-full max-w-7xl mx-auto">
+        <div className="flex-1 overflow-auto px-4 md:px-8 py-10 decision-card-scroll">
+          <div className="min-w-[1200px] w-full max-w-7xl mx-auto">
             {/* ── Tree card ── */}
             <div
               ref={cardRef}
@@ -295,11 +302,11 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
                             <div key={j} style={{ position: 'relative' }}>
                               <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: -38, height: 38, width: 2, background: 'rgba(201,184,150,0.4)', zIndex: 4 }} />
                               <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', width: 5, height: 5, borderRadius: '50%', background: '#c9b896', boxShadow: '0 0 6px rgba(201,184,150,0.8)', zIndex: 5 }} />
-                              <div className="rounded-xl border flex flex-col items-center justify-center gap-2" style={{ padding: '15px 16px', background: '#1a1610', borderColor: col.border, borderWidth: '1.5px', boxShadow: col.subGlow, aspectRatio: '4 / 3' }}>
-                                <div className="flex items-center justify-center w-10 h-10 rounded-full" style={{ background: 'rgba(201,184,150,0.1)', border: '1px solid rgba(201,184,150,0.35)', boxShadow: '0 0 8px rgba(201,184,150,0.15)' }}>
+                              <div className="rounded-xl border flex flex-col items-center gap-2" style={{ height: 130, padding: '12px 10px 10px', background: '#1a1610', borderColor: col.border, borderWidth: '1.5px', boxShadow: col.subGlow, overflow: 'hidden' }}>
+                                <div className="flex items-center justify-center w-10 h-10 rounded-full shrink-0" style={{ background: 'rgba(201,184,150,0.1)', border: '1px solid rgba(201,184,150,0.35)', boxShadow: '0 0 8px rgba(201,184,150,0.15)' }}>
                                   {col.subIcons[j]}
                                 </div>
-                                <p style={{ fontSize: '14px', fontWeight: 500, color: '#d4c49e', lineHeight: 1.4, textAlign: 'center', textShadow: '0 0 8px rgba(201,184,150,0.45)' }}>{col.subItems[j] ?? col.empty}</p>
+                                <p style={{ fontSize: '12px', fontWeight: 500, color: '#d4c49e', lineHeight: 1.4, textAlign: 'center', textShadow: '0 0 8px rgba(201,184,150,0.45)' }}>{col.subItems[j] ?? col.empty}</p>
                               </div>
                             </div>
                           ))}

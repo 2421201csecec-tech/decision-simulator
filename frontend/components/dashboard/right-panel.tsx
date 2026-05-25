@@ -200,14 +200,14 @@ function TickerHeader({ active }: { active: boolean }) {
 // Kautilya cards
 // ---------------------------------------------------------------------------
 
-const HEADING = '#c9a84c';
+const HEADING = 'var(--foreground)';
 const ITEM_TEXT = 'rgba(230,218,195,0.95)';
 const DIVIDER = 'rgba(201,184,150,0.45)';
 
 function KautilyaCard({ title, items, emptyText }: { title: string; items: string[]; emptyText: string }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-center" style={{ color: HEADING, textShadow: '0 0 8px rgba(201,160,60,0.7), 0 0 20px rgba(201,160,60,0.35)' }}>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: HEADING }}>
         {title}
       </p>
       <div style={{ height: 2, background: DIVIDER }} />
@@ -421,7 +421,7 @@ export function RightPanel({
 
       {/* Kautilya cards — clarify, pressure-test, failure-analysis */}
       {showKautilya && (
-        <div className="flex-1 overflow-y-auto scroll-container">
+        <div className="flex-1 overflow-y-auto scroll-container mt-8">
           {kautilyaText.trim().length < 20 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
               <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(201,184,150,0.1)', border: '1px solid rgba(201,184,150,0.2)' }}>

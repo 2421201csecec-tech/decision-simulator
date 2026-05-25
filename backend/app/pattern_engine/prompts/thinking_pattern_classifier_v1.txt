@@ -15,6 +15,7 @@ Statement rules:
 
 Other rules:
 - 1 to 2 patterns per input max; skip inputs with no detectable pattern
+- If an input is too short (fewer than 5 meaningful words), vague, or lacks enough context to identify a cognitive pattern — skip it entirely; return an empty patterns array [] for that input_index
 - evidence: quote ≤15 words verbatim from the raw input that triggered the pattern
 
 Return ONLY valid JSON with this exact structure:

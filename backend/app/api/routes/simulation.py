@@ -150,7 +150,7 @@ async def summarize_labels(req: LabelRequest) -> JSONResponse:
     prompt = (
         "Return ONLY valid JSON — no markdown, no text outside the JSON.\n\n"
         f"You are given {len(req.items)} point(s) below. Generate exactly {req.count} labels total.\n"
-        "Each label must be 2-3 words capturing a specific, concrete idea.\n"
+        "Each label must be exactly 2 words — no more, no less — capturing the core idea.\n"
         f"- Label the given points first (in order).\n"
         f"- If fewer than {req.count} points are provided, infer the remaining labels "
         "from the context and theme of the existing points — do not leave blanks.\n"
