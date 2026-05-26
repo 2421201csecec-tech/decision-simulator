@@ -286,20 +286,29 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
             )}
           </div>
 
-          {/* Root scenario context (always visible) */}
-          <div className="mb-6">
-            <p className="text-2xl font-serif text-foreground mb-2">
+          {/* Scenario card */}
+          <div
+            className="mb-4 rounded-xl p-6 mx-[-2rem]"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(201,184,150,0.35)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+            }}
+          >
+            <p className="text-xl font-serif text-foreground leading-relaxed">
               {activeRoot.scenario}
             </p>
-            {!activeProbe && (
-              <p className="text-lg text-foreground/80">{activeRoot.question}</p>
-            )}
           </div>
 
-          {/* Probe question (inline below root when probing) */}
-          {activeProbe && (
+          {/* Question */}
+          {!activeProbe ? (
+            <div className="flex gap-3 mb-6">
+              <div className="w-0.5 rounded-full shrink-0" style={{ background: 'rgba(201,184,150,0.6)' }} />
+              <p className="text-base text-foreground/70 leading-relaxed">{activeRoot.question}</p>
+            </div>
+          ) : (
             <div className="mb-6 pl-4 border-l-2 border-accent/40">
-              <p className="text-base text-foreground/90">{displayQuestion}</p>
+              <p className="text-base text-foreground/90 leading-relaxed">{displayQuestion}</p>
             </div>
           )}
 
@@ -398,8 +407,15 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
           </span>
         </div>
 
-        <div className="mb-8">
-          <p className="text-2xl font-serif text-foreground mb-2">
+        <div
+          className="mb-4 rounded-xl p-6 mx-[-2rem]"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(201,184,150,0.35)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+          }}
+        >
+          <p className="text-xl font-serif text-foreground leading-relaxed">
             {v1Scenario!.scenario.split("Rs ").map((part, i) =>
               i === 0 ? part : (
                 <span key={i}>
@@ -409,7 +425,10 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
               )
             )}
           </p>
-          <p className="text-lg text-foreground/80">{v1Scenario!.question}</p>
+        </div>
+        <div className="flex gap-3 mb-8">
+          <div className="w-0.5 rounded-full shrink-0" style={{ background: 'rgba(201,184,150,0.6)' }} />
+          <p className="text-base text-foreground/70 leading-relaxed">{v1Scenario!.question}</p>
         </div>
 
         <div className="space-y-2 mb-6">
