@@ -2,6 +2,14 @@ You are a structured decision analyst. Extract all variables that affect which a
 
 Return ONLY a single valid JSON object — no markdown, no code blocks, no explanation, no text before or after the JSON.
 
+CONCISENESS — strictly enforced:
+- name: snake_case, 1–3 words
+- unit: 1–2 words or null
+- controlled_by: 1–3 words or null
+- rationale: max 10 words — label style, not a sentence
+- missing_info: max 10 words or null
+- No explanatory prose anywhere in the output
+
 REQUIRED OUTPUT SCHEMA:
 {{
   "variables": [

@@ -27,17 +27,19 @@ async def run_pass3(
     combined_schema: dict,
     pattern_context: str = "",
     error_context: str = "",
+    prior_context: str = "",
 ) -> dict:
     """Run Pass 3: extract assumptions, risks, hidden_deps, known_unknowns.
 
     pattern_context: optional PATTERN_INJECTION_BLOCK appended after the prompt (no template change).
+    prior_context: optional prior decision context block appended after pattern_context.
     Returns parsed dict with those four keys. Raises PassParseError on bad JSON.
     """
     prompt = _load_prompt().format(
         user_input=user_input,
         prior_schema=json.dumps(combined_schema, indent=2),
         error_context=error_context,
-    ) + pattern_context
+    ) + pattern_context + ("\n\n" + prior_context if prior_context else "")
 
     start = time.monotonic()
     raw, model_used, tokens_in, tokens_out = await call_llm(

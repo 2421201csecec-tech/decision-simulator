@@ -77,7 +77,7 @@ def V006_continuous_range_valid(schema: dict) -> RuleResult:
     for var in schema.get("variables", []):
         if var.get("type") in ("continuous", "ordinal"):
             r = var.get("range")
-            if r is None or len(r) != 2 or r[0] >= r[1]:
+            if r is None or len(r) != 2 or r[0] is None or r[1] is None or r[0] >= r[1]:
                 return RuleResult(
                     passed=False, rule_id="V006",
                     message=f"Variable '{var.get('name')}': range must be [min, max] with min < max, got {r}",

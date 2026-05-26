@@ -69,13 +69,15 @@ def _validate_roots(raw_list: list) -> list[dict]:
     return result
 
 
-async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None = None) -> list[dict]:
+async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None = None, prior_context: str = "") -> list[dict]:
     """
     Fast pre-generation of 3 root scenarios (execution / financial / external)
     from a clarify draft. One LLM call, returns normalised root dicts.
 
     weak_spots: patterns from PatternProfile where count >= 2. When present,
     at least 2 of the 3 scenarios are biased toward the founder's known failure modes.
+
+    prior_context: optional prior decision context block appended to the prompt.
 
     Returns [] if draft is too thin or LLM fails.
     """
@@ -114,7 +116,7 @@ async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None 
         weak_spots=weak_spots_text,
         failure_context=failure_context_text,
         document_context=document_context_text,
-    )
+    ) + ("\n\n" + prior_context if prior_context else "")
 
     temperature = 0.4
     for attempt in range(2):

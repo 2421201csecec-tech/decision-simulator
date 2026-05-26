@@ -12,7 +12,7 @@ from .provenance import EnrichmentAuditRecord
 logger = logging.getLogger("extraction.enricher")
 
 _PROMPT_DIR = Path(__file__).parent.parent / "prompts"
-_MAX_TOKENS = 3000
+_MAX_TOKENS = 4000
 
 
 def _load_prompt() -> str:

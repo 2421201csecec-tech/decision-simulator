@@ -150,6 +150,7 @@ async def _run_pass_with_retry(
     validator: SchemaValidator,
     schema_ref: dict,
     *runner_args,
+    prior_context: str = "",
 ) -> dict:
     """Run a pass with up to max_retries_per_pass retries on HARD validation failures.
 
@@ -163,7 +164,7 @@ async def _run_pass_with_retry(
         t0 = asyncio.get_event_loop().time()
         logger.info("[pipeline] pass%d attempt=%d starting", pass_num, attempt + 1)
         try:
-            output = await runner(*runner_args, error_context=error_context)
+            output = await runner(*runner_args, error_context=error_context, prior_context=prior_context)
         except (Pass1ParseError, Pass2ParseError, Pass3ParseError) as exc:
             elapsed = asyncio.get_event_loop().time() - t0
             if attempt == max_attempts - 1:
@@ -248,6 +249,7 @@ async def run_extraction(
     user_id: str = "",
     decision_id: str | None = None,
     category_hint: str | None = None,
+    prior_context: str = "",
 ) -> dict:
     """Run the full extraction pipeline.
 
@@ -302,6 +304,7 @@ async def run_extraction(
             await _run_pass_with_retry(
                 1, run_pass1, validator, schema,
                 user_input, memory_context,  # positional args for run_pass1
+                prior_context=prior_context,
             )
 
         # Pass 2
@@ -309,6 +312,7 @@ async def run_extraction(
             await _run_pass_with_retry(
                 2, run_pass2, validator, schema,
                 user_input, dict(schema),
+                prior_context=prior_context,
             )
             # Hook A — Post-Pass-2: importance boost (no-op when flag is off)
             if caps["use_pattern_injection"]:
@@ -334,6 +338,7 @@ async def run_extraction(
         await _run_pass_with_retry(
             3, run_pass3, validator, schema,
             user_input, dict(schema), pattern_block,
+            prior_context=prior_context,
         )
 
     except _PersistentFailure as exc:

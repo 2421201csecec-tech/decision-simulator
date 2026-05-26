@@ -228,6 +228,27 @@ async function parseApiError(response: Response, fallbackMessage: string): Promi
   throw new Error(message);
 }
 
+export interface ImportableThread {
+  id: string;
+  title: string;
+  decision: string;
+}
+
+export async function fetchImportableThreads(): Promise<ImportableThread[]> {
+  const response = await fetch("/api/threads/importable", { cache: "no-store" });
+  if (!response.ok) return [];
+  const data = await response.json();
+  return data.threads ?? [];
+}
+
+export async function saveContingentThread(threadId: string, contingentOnThreadId: string): Promise<void> {
+  await fetch(`/api/threads/${threadId}/contingent`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contingentOnThreadId }),
+  });
+}
+
 export async function fetchGroupedThreads(): Promise<GroupedThreads> {
   const response = await fetch("/api/threads?grouped=true", { cache: "no-store" });
   if (!response.ok) return parseApiError(response, "Failed to fetch threads");

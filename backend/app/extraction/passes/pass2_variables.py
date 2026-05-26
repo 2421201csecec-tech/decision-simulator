@@ -103,6 +103,7 @@ async def run_pass2(
     pass1_schema: dict,
     memory_context: str = "",
     error_context: str = "",
+    prior_context: str = "",
 ) -> list[dict]:
     """Run Pass 2: extract variables[]. Returns list with variable_ids injected.
 
@@ -113,7 +114,7 @@ async def run_pass2(
         prior_schema=json.dumps(pass1_schema, indent=2),
         memory_context=memory_context or "No prior context available.",
         error_context=error_context,
-    )
+    ) + ("\n\n" + prior_context if prior_context else "")
 
     start = time.monotonic()
     raw, model_used, tokens_in, tokens_out = await call_llm(

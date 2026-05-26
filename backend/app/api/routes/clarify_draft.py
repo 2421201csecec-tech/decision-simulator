@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, StringConstraints, ValidationError
 
 from app.extraction.pipeline import compose_draft_input, run_extraction
-from app.storage.thread_store import get_thread_by_id, save_clarify_draft, save_extraction_schema
+from app.storage.thread_store import get_contingent_context_block, get_thread_by_id, save_clarify_draft, save_extraction_schema
 
 router = APIRouter()
 logger = logging.getLogger("clarify_draft")
@@ -108,8 +108,9 @@ async def post_extract(thread_id: str, request: Request) -> JSONResponse:
     from app.extraction.passes.pass3_risks import PassParseError as P3Err
     from app.extraction.pipeline import ExtractionError
     user_input = compose_draft_input(clarify_draft)
+    prior_context = await get_contingent_context_block(thread_id)
     try:
-        result = await run_extraction(user_input, user_id=user_id, decision_id=thread_id)
+        result = await run_extraction(user_input, user_id=user_id, decision_id=thread_id, prior_context=prior_context)
     except LLMError as exc:
         logger.warning("extract LLMError thread=%s: %s", thread_id, exc)
         return JSONResponse({"message": "AI service is rate-limited, please try again in a moment."}, status_code=503)

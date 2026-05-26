@@ -18,6 +18,7 @@ class Decision(Base):
     title = Column(String, nullable=False, default="Untitled Decision")
     status = Column(String, nullable=False, default="active")
     parent_decision_id = Column(String, ForeignKey("decisions.decision_id"), nullable=True)
+    contingent_on_thread_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False)
     clarify_draft = Column(JSON, nullable=False, default=dict)

@@ -37,6 +37,9 @@ from app.storage.thread_repository import (
     get_all_threads_export_data as _get_all_threads_export_data,
     cleanup_empty_threads as _cleanup_empty_threads,
     rebuild_thread as _rebuild_thread,
+    get_importable_threads as _get_importable_threads,
+    save_contingent_on_thread_id as _save_contingent_on_thread_id,
+    get_contingent_context_block as _get_contingent_context_block,
 )
 
 ThreadStatus = Literal["active", "revision", "failed", "completed"]
@@ -148,3 +151,15 @@ async def cleanup_empty_threads(older_than_hours: int = 24) -> int:
 
 async def rebuild_thread(thread_id: str, user_id: str, lessons: list[str]) -> dict[str, Any] | None:
     return await _rebuild_thread(thread_id, user_id, lessons)
+
+
+async def get_importable_threads(user_id: str) -> list[dict]:
+    return await _get_importable_threads(user_id)
+
+
+async def save_contingent_on_thread_id(thread_id: str, contingent_id: str, user_id: str) -> bool:
+    return await _save_contingent_on_thread_id(thread_id, contingent_id, user_id)
+
+
+async def get_contingent_context_block(thread_id: str) -> str:
+    return await _get_contingent_context_block(thread_id)

@@ -8,7 +8,13 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
-from app.storage.thread_store import create_thread, get_grouped_threads, rebuild_thread
+from app.storage.thread_store import (
+    create_thread,
+    get_grouped_threads,
+    get_importable_threads,
+    rebuild_thread,
+    save_contingent_on_thread_id,
+)
 
 router = APIRouter()
 
@@ -65,6 +71,24 @@ async def create_threads(request: Request) -> JSONResponse:
     )
 
     return JSONResponse(thread, status_code=201)
+
+
+@router.get("/threads/importable")
+async def list_importable_threads(request: Request) -> JSONResponse:
+    threads = await get_importable_threads(request.state.user_id)
+    return JSONResponse({"threads": threads})
+
+
+class ContingentPayload(BaseModel):
+    contingentOnThreadId: str
+
+
+@router.put("/threads/{thread_id}/contingent")
+async def put_contingent(thread_id: str, payload: ContingentPayload, request: Request) -> JSONResponse:
+    updated = await save_contingent_on_thread_id(thread_id, payload.contingentOnThreadId, request.state.user_id)
+    if not updated:
+        return JSONResponse({"message": "Thread not found"}, status_code=404)
+    return JSONResponse({"ok": True})
 
 
 class RebuildPayload(BaseModel):

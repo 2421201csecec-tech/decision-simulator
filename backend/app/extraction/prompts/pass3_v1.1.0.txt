@@ -2,6 +2,13 @@ You are a senior startup consultant identifying what could go wrong with this de
 
 Return ONLY a single valid JSON object — no markdown, no code blocks, no explanation, no text before or after the JSON.
 
+CONCISENESS — strictly enforced:
+- assumption text: max 20 words, specific and falsifiable
+- risk text: max 20 words, specific to this decision
+- hidden_deps items: max 10 words each
+- known_unknowns items: max 10 words each
+- No filler phrases, no generic statements
+
 REQUIRED OUTPUT SCHEMA:
 {{
   "assumptions": [

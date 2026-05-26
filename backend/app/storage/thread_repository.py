@@ -80,6 +80,7 @@ def _decision_to_dict(decision: Decision) -> dict[str, Any]:
         "title": decision.title,
         "status": decision.status,
         "parentThreadId": decision.parent_decision_id,
+        "contingentOnThreadId": decision.contingent_on_thread_id,
         "createdAt": _format_dt(decision.created_at),
         "updatedAt": _format_dt(decision.updated_at),
         "clarifyDraft": decision.clarify_draft or {},
@@ -523,7 +524,8 @@ async def generate_pressure_test(thread_id: str, user_id: str) -> dict[str, Any]
 
         if decision.pressure_test is None:
             weak_spots = await get_weak_spots(user_id)
-            ai_roots = await pre_generate_roots(clarify_draft, weak_spots=weak_spots or None)
+            prior_context = await get_contingent_context_block(thread_id)
+            ai_roots = await pre_generate_roots(clarify_draft, weak_spots=weak_spots or None, prior_context=prior_context)
             if not ai_roots:
                 return None
             state: dict[str, Any] = _build_v2_state(ai_roots)
@@ -1856,3 +1858,130 @@ async def get_all_threads_export_data(user_id: str) -> list[dict[str, Any]]:
         )
         decisions = result.scalars().all()
         return [_build_thread_export(_decision_to_dict_full(d)) for d in decisions]
+
+
+# ---------------------------------------------------------------------------
+# Contingent decision helpers
+# ---------------------------------------------------------------------------
+
+async def get_importable_threads(user_id: str) -> list[dict[str, Any]]:
+    """Fetch active decisions with a non-null extraction_schema for the given user."""
+    async with get_async_session() as session:
+        result = await session.execute(
+            select(Decision).where(
+                Decision.user_id == user_id,
+                Decision.status == "active",
+                Decision.extraction_schema.isnot(None),
+            )
+        )
+        decisions = result.scalars().all()
+        return [
+            {
+                "id": d.decision_id,
+                "title": d.title,
+                "decision": d.clarify_draft.get("coreProblem", "") if d.clarify_draft else "",
+            }
+            for d in decisions
+        ]
+
+
+async def save_contingent_on_thread_id(thread_id: str, contingent_id: str, user_id: str) -> bool:
+    """Update contingent_on_thread_id on a decision. Returns True if updated, False if not found."""
+    async with get_async_session() as session:
+        result = await session.execute(
+            sa_update(Decision)
+            .where(Decision.decision_id == thread_id, Decision.user_id == user_id)
+            .values(contingent_on_thread_id=contingent_id, updated_at=_now())
+            .returning(Decision.decision_id)
+        )
+        updated = result.first()
+        await session.commit()
+        return updated is not None
+
+
+async def get_contingent_context_block(thread_id: str) -> str:
+    """
+    Fetches the thread's contingent_on_thread_id, then builds a context block string
+    from the source decision's extraction_schema and clarify_draft.
+    Returns "" if no contingent thread exists or anything fails.
+    """
+    try:
+        async with get_async_session() as session:
+            # Fetch the contingent_on_thread_id for the given thread
+            result = await session.execute(
+                select(Decision.contingent_on_thread_id).where(Decision.decision_id == thread_id)
+            )
+            row = result.first()
+            if row is None or not row[0]:
+                return ""
+            contingent_id = row[0]
+
+            # Fetch source decision's schema, draft, and title
+            src_result = await session.execute(
+                select(Decision.extraction_schema, Decision.clarify_draft, Decision.title)
+                .where(Decision.decision_id == contingent_id)
+            )
+            src_row = src_result.first()
+            if src_row is None:
+                return ""
+
+            extraction_schema, clarify_draft, title = src_row[0], src_row[1], src_row[2]
+            if not extraction_schema:
+                return ""
+
+            # Context
+            context = (clarify_draft or {}).get("context", "") if clarify_draft else ""
+
+            # Assumptions — join as text
+            raw_assumptions = extraction_schema.get("assumptions") or []
+            assumption_texts: list[str] = []
+            for a in raw_assumptions:
+                if isinstance(a, dict):
+                    text = a.get("text") or a.get("statement") or ""
+                else:
+                    text = str(a)
+                if text:
+                    assumption_texts.append(text)
+            assumptions_str = "; ".join(assumption_texts)
+
+            # Risks — take first 3, use "statement" or "text" key
+            raw_risks = extraction_schema.get("risks") or []
+            risk_texts: list[str] = []
+            for r in raw_risks[:3]:
+                if isinstance(r, dict):
+                    text = r.get("statement") or r.get("text") or ""
+                else:
+                    text = str(r)
+                if text:
+                    risk_texts.append(text)
+            risks_str = "; ".join(risk_texts)
+
+            # Variables — critical/high severity, take first 3, name only
+            raw_variables = extraction_schema.get("variables") or []
+            key_vars: list[str] = []
+            for v in raw_variables:
+                if not isinstance(v, dict):
+                    continue
+                severity = v.get("severity") or v.get("importance") or ""
+                if severity in ("critical", "high"):
+                    name = v.get("name") or ""
+                    if name:
+                        key_vars.append(name)
+                if len(key_vars) >= 3:
+                    break
+            vars_str = "; ".join(key_vars)
+
+            lines = [
+                "=== PRIOR DECISION CONTEXT ===",
+                "The user is making this decision in the context of a prior decision they have already analysed.",
+                f'Prior decision: "{title}"',
+                f"Context: {context}",
+                f"Key assumptions: {assumptions_str}",
+                f"Key risks: {risks_str}",
+                f"Key variables: {vars_str}",
+                "==============================",
+            ]
+            return "\n".join(lines)
+    except Exception:
+        logger.warning("get_contingent_context_block failed for thread %s", thread_id, exc_info=True)
+        return ""

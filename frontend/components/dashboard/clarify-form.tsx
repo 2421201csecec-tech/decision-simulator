@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, Plus, ArrowRight, X, FileText, FileSpreadsheet, File } from "lucide-react";
-import { generatePressureTest } from "@/lib/api/threads";
+import { ChevronLeft, Plus, ArrowRight, X, FileText, FileSpreadsheet, File, Link2 } from "lucide-react";
+import { generatePressureTest, fetchImportableThreads, saveContingentThread, type ImportableThread } from "@/lib/api/threads";
 
 interface UploadedFile {
   name: string;
@@ -44,6 +44,10 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
   const [showConstraintInput, setShowConstraintInput] = useState(false);
   const [showAssumptionInput, setShowAssumptionInput] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [showImportPicker, setShowImportPicker] = useState(false);
+  const [importableThreads, setImportableThreads] = useState<ImportableThread[]>([]);
+  const [loadingImportable, setLoadingImportable] = useState(false);
+  const [contingentThread, setContingentThread] = useState<ImportableThread | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasMountedRef = useRef(false);
   const lastQueuedPayloadRef = useRef<string>("");
@@ -181,6 +185,22 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
 
+  const handleOpenImportPicker = async () => {
+    if (showImportPicker) { setShowImportPicker(false); return; }
+    setShowImportPicker(true);
+    if (importableThreads.length > 0) return;
+    setLoadingImportable(true);
+    const threads = await fetchImportableThreads();
+    setImportableThreads(threads);
+    setLoadingImportable(false);
+  };
+
+  const handleSelectContingent = async (thread: ImportableThread) => {
+    setContingentThread(thread);
+    setShowImportPicker(false);
+    if (threadId) await saveContingentThread(threadId, thread.id);
+  };
+
   const getFileIcon = (type: string) => {
     if (type.includes("pdf")) {
       return <FileText className="w-4 h-4 text-accent" />;
@@ -230,8 +250,8 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
           </div>
         </div>
         
-        {/* File badges + Add button */}
-        <div className="flex items-center gap-2">
+        {/* File badges + buttons */}
+        <div className="flex items-center gap-2 relative">
           {uploadedFiles.map((file, index) => (
             <div
               key={index}
@@ -255,20 +275,67 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
               )}
             </div>
           ))}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
+
+          {/* Contingent badge */}
+          {contingentThread && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs"
+              style={{ background: 'rgba(201,184,150,0.08)', border: '1px solid rgba(201,184,150,0.3)', color: '#c9b896' }}
+            >
+              <Link2 className="w-3 h-3" />
+              <span className="max-w-[100px] truncate">{contingentThread.title}</span>
+              <button onClick={() => setContingentThread(null)} className="opacity-60 hover:opacity-100 transition-opacity">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" onChange={handleFileUpload} className="hidden" />
+
           <button
             onClick={() => fileInputRef.current?.click()}
             className="px-3 py-1.5 text-sm text-accent border border-accent/50 rounded-lg hover:bg-accent/10 transition-colors flex items-center gap-1.5"
           >
             Add <Plus className="w-3.5 h-3.5" />
           </button>
+
+          {/* Import from prior decision */}
+          <button
+            onClick={handleOpenImportPicker}
+            className="px-3 py-1.5 text-sm rounded-lg border transition-colors flex items-center gap-1.5"
+            style={{
+              borderColor: showImportPicker ? 'rgba(201,184,150,0.6)' : 'rgba(201,184,150,0.25)',
+              color: showImportPicker ? '#c9b896' : 'rgba(201,184,150,0.5)',
+            }}
+          >
+            Import <Link2 className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Picker dropdown */}
+          {showImportPicker && (
+            <div className="absolute right-0 top-full mt-2 w-72 rounded-xl border z-50 overflow-hidden"
+              style={{ background: 'var(--card)', borderColor: 'rgba(201,184,150,0.25)', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+            >
+              <p className="px-4 pt-3 pb-2 text-xs text-muted-foreground">Import</p>
+              {loadingImportable ? (
+                <p className="px-4 pb-3 text-xs text-muted-foreground">Loading...</p>
+              ) : importableThreads.length === 0 ? (
+                <p className="px-4 pb-3 text-xs text-muted-foreground">No extracted decisions found.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto">
+                  {importableThreads.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleSelectContingent(t)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-secondary/60 transition-colors"
+                    >
+                      <p className="text-sm text-foreground truncate">{t.title}</p>
+                      {t.decision && <p className="text-xs text-muted-foreground truncate mt-0.5">{t.decision}</p>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

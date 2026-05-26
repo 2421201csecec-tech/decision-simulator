@@ -26,6 +26,7 @@ async def run_pass1(
     user_input: str,
     memory_context: str = "",
     error_context: str = "",
+    prior_context: str = "",
 ) -> dict:
     """Run Pass 1: extract decision frame (decision, actions, actors, constraints).
 
@@ -35,7 +36,7 @@ async def run_pass1(
         user_input=user_input,
         memory_context=memory_context or "No prior context available.",
         error_context=error_context,
-    )
+    ) + ("\n\n" + prior_context if prior_context else "")
 
     start = time.monotonic()
     raw, model_used, tokens_in, tokens_out = await call_llm(
