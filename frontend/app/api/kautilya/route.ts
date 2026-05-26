@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "llama-3.3-70b-versatile";
 
 const SYSTEM_PROMPT = `You are Kautilya, a strategic decision intelligence assistant embedded in a decision-making workspace. Analyze the raw input the user has written and return exactly 3 items for each of these three categories:
 
@@ -19,9 +19,9 @@ Required shape:
 {"suggestions":["...","...","..."],"biases":["...","...","..."],"thinkAbout":["...","...","..."]}`;
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "Gemini API key not configured" }, { status: 500 });
+    return NextResponse.json({ error: "Groq API key not configured" }, { status: 500 });
   }
 
   let body: { text?: string; source?: string };
@@ -40,30 +40,33 @@ export async function POST(request: NextRequest) {
   const userPrompt = `Stage: ${source}\n\nUser input:\n${text.slice(0, 1500)}`;
 
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    const res = await fetch(GROQ_URL, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "authorization": `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\n${userPrompt}` }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+        model: MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 1024,
       }),
       signal: AbortSignal.timeout(12_000),
     });
 
     if (!res.ok) {
       const errBody = await res.text();
-      console.error("[kautilya] Gemini error", res.status, errBody.slice(0, 300));
-      return NextResponse.json({ error: "Gemini error" }, { status: 502 });
+      console.error("[kautilya] Groq error", res.status, errBody.slice(0, 300));
+      return NextResponse.json({ error: "Groq error" }, { status: 502 });
     }
 
     const data = await res.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const raw = data?.choices?.[0]?.message?.content ?? "";
 
-    // Strip markdown fences, then extract the first {...} block
     const stripped = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const start = stripped.indexOf("{");
     const end = stripped.lastIndexOf("}");
@@ -71,19 +74,13 @@ export async function POST(request: NextRequest) {
       console.error("[kautilya] no JSON object found in response");
       return NextResponse.json({ suggestions: [], biases: [], thinkAbout: [] });
     }
-    const jsonStr = stripped.slice(start, end + 1);
 
     let parsed: { suggestions?: string[]; biases?: string[]; thinkAbout?: string[] };
     try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      // Last resort: try sanitizing control characters
-      try {
-        parsed = JSON.parse(jsonStr.replace(/[\x00-\x1F\x7F]/g, " "));
-      } catch (e2) {
-        console.error("[kautilya] JSON parse failed after sanitize:", e2 instanceof Error ? e2.message : String(e2));
-        return NextResponse.json({ suggestions: [], biases: [], thinkAbout: [] });
-      }
+      parsed = JSON.parse(stripped.slice(start, end + 1));
+    } catch (e) {
+      console.error("[kautilya] JSON parse failed:", e instanceof Error ? e.message : String(e));
+      return NextResponse.json({ suggestions: [], biases: [], thinkAbout: [] });
     }
 
     return NextResponse.json({
