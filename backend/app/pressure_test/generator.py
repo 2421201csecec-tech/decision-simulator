@@ -119,7 +119,7 @@ async def pre_generate_roots(clarify_draft: dict, weak_spots: list[dict] | None 
     temperature = 0.4
     for attempt in range(2):
         try:
-            raw, _, _, _ = await call_llm(prompt, temperature=temperature, max_tokens=900)
+            raw, _, _, _ = await call_llm(prompt, temperature=temperature, max_tokens=900, model=settings.llm_fallback_model)
             parsed = json.loads(_clean_fences(raw))
             roots = _validate_roots(parsed)
             if roots:
