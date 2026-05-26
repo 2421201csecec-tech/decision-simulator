@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -56,11 +56,27 @@ function EidozLogo({ className = "" }: { className?: string }) {
 export function TopNav({ onLogoClick }: TopNavProps) {
   const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAnonymous(user?.is_anonymous ?? false);
+    });
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
+  };
+
+  const handleUpgrade = async () => {
+    const supabase = createClient();
+    await supabase.auth.linkIdentity({
+      provider: 'google',
+      options: { redirectTo: `${location.origin}/auth/callback` },
+    });
   };
 
   return (
@@ -81,6 +97,25 @@ export function TopNav({ onLogoClick }: TopNavProps) {
         {/* Right: Notification and Profile */}
         <div className="flex items-center gap-4">
 
+          {/* Guest upgrade notice */}
+          {isAnonymous && (
+            <button
+              onClick={handleUpgrade}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors"
+              style={{
+                background: 'rgba(201,184,150,0.08)',
+                border: '1px solid rgba(201,184,150,0.25)',
+                color: '#c9b896',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(201,184,150,0.15)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(201,184,150,0.08)')}
+            >
+              <span>Guest mode</span>
+              <span style={{ color: 'rgba(201,184,150,0.6)' }}>·</span>
+              <span>Save data →</span>
+            </button>
+          )}
+
           <NotificationBell />
 
           <DropdownMenu>
@@ -96,6 +131,19 @@ export function TopNav({ onLogoClick }: TopNavProps) {
               align="end"
               className="w-48 bg-card border-border"
             >
+              {isAnonymous && (
+                <>
+                  <DropdownMenuItem
+                    className="cursor-pointer hover:bg-secondary focus:bg-secondary"
+                    style={{ color: '#c9b896' }}
+                    onClick={handleUpgrade}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Connect Google
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border" />
+                </>
+              )}
               <DropdownMenuItem
                 className="cursor-pointer text-foreground hover:bg-secondary focus:bg-secondary"
                 onClick={() => setShowSettings(true)}

@@ -10,7 +10,7 @@ from .llm_client import call_llm, LLMError
 
 _PROMPT_DIR = Path(__file__).parent.parent / "prompts"
 _PASS_NUM = 3
-_MAX_TOKENS = 2000
+_MAX_TOKENS = 4000
 
 
 class PassParseError(Exception):

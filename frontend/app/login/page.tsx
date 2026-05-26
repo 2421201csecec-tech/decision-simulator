@@ -7,6 +7,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [guestLoading, setGuestLoading] = useState(false)
+  const [guestError, setGuestError] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
 
   const signInWithGoogle = async () => {
@@ -25,6 +27,18 @@ export default function LoginPage() {
     })
     setLoading(false)
     setSent(true)
+  }
+
+  const signInAnonymously = async () => {
+    setGuestLoading(true)
+    setGuestError(null)
+    const { error } = await supabase.auth.signInAnonymously()
+    if (error) {
+      setGuestError(error.message)
+      setGuestLoading(false)
+      return
+    }
+    window.location.href = '/'
   }
 
   return (
@@ -142,6 +156,28 @@ export default function LoginPage() {
             >
               {loading ? 'Sending…' : 'Continue with email'}
             </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 mt-1">
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            </div>
+
+            {/* Guest access */}
+            <button
+              onClick={signInAnonymously}
+              disabled={!agreed || guestLoading}
+              className="w-full py-2 text-sm transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ color: 'var(--muted-foreground)' }}
+              onMouseEnter={(e) => { if (agreed && !guestLoading) e.currentTarget.style.color = 'var(--foreground)' }}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
+            >
+              {guestLoading ? 'Setting up…' : 'Try without an account'}
+            </button>
+            {guestError && (
+              <p className="text-xs text-center" style={{ color: 'var(--destructive)' }}>
+                {guestError}
+              </p>
+            )}
           </div>
         )}
       </div>

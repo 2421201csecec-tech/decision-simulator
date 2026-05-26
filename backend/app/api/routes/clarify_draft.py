@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Request
@@ -12,6 +13,7 @@ from app.extraction.pipeline import compose_draft_input, run_extraction
 from app.storage.thread_store import get_thread_by_id, save_clarify_draft, save_extraction_schema
 
 router = APIRouter()
+logger = logging.getLogger("clarify_draft")
 
 TextListItem = Annotated[
     str,
@@ -101,14 +103,25 @@ async def post_extract(thread_id: str, request: Request) -> JSONResponse:
         return JSONResponse({"message": "Clarify draft is empty"}, status_code=400)
 
     from app.extraction.passes.llm_client import LLMError
+    from app.extraction.passes.pass1_intent import PassParseError as P1Err
+    from app.extraction.passes.pass2_variables import PassParseError as P2Err
+    from app.extraction.passes.pass3_risks import PassParseError as P3Err
     from app.extraction.pipeline import ExtractionError
     user_input = compose_draft_input(clarify_draft)
     try:
         result = await run_extraction(user_input, user_id=user_id, decision_id=thread_id)
-    except LLMError:
+    except LLMError as exc:
+        logger.warning("extract LLMError thread=%s: %s", thread_id, exc)
         return JSONResponse({"message": "AI service is rate-limited, please try again in a moment."}, status_code=503)
+    except (P1Err, P2Err, P3Err) as exc:
+        logger.warning("extract ParseError thread=%s: %s", thread_id, exc)
+        return JSONResponse({"message": "Extraction parse error, please try again."}, status_code=503)
     except ExtractionError as exc:
+        logger.error("extract ExtractionError thread=%s: %s", thread_id, exc)
         return JSONResponse({"message": f"Extraction failed: {exc}"}, status_code=422)
+    except Exception as exc:
+        logger.error("extract unexpected error thread=%s: %s: %s", thread_id, type(exc).__name__, exc, exc_info=True)
+        return JSONResponse({"message": "Extraction failed unexpectedly, please try again."}, status_code=503)
 
     if result.get("status") == "clarification_needed":
         return JSONResponse({"message": "Clarification needed", "detail": result}, status_code=409)
@@ -177,7 +190,4 @@ async def _classify_clarify_draft(
                 pressure_test={},
             )
     except Exception:
-        import logging
-        logging.getLogger("clarify_draft").warning(
-            "clarify pattern classify failed thread=%s", thread_id, exc_info=True
-        )
+        logger.warning("clarify pattern classify failed thread=%s", thread_id, exc_info=True)

@@ -11,7 +11,10 @@ from app.extraction.consistency.checker import run_checks
 from app.extraction.enrichment.enricher import Enricher
 from app.extraction.memory.retriever import retrieve_similar
 from app.extraction.memory.writer import should_store, write_extraction_to_memory
-from app.extraction.passes.pass1_intent import run_pass1, PassParseError
+from app.extraction.passes.pass1_intent import run_pass1
+from app.extraction.passes.pass1_intent import PassParseError as Pass1ParseError
+from app.extraction.passes.pass2_variables import PassParseError as Pass2ParseError
+from app.extraction.passes.pass3_risks import PassParseError as Pass3ParseError
 from app.extraction.passes.pass2_variables import run_pass2
 from app.extraction.passes.pass3_risks import run_pass3
 from app.extraction.schemas import (
@@ -157,7 +160,27 @@ async def _run_pass_with_retry(
     max_attempts = settings.max_retries_per_pass + 1
 
     for attempt in range(max_attempts):
-        output = await runner(*runner_args, error_context=error_context)
+        t0 = asyncio.get_event_loop().time()
+        logger.info("[pipeline] pass%d attempt=%d starting", pass_num, attempt + 1)
+        try:
+            output = await runner(*runner_args, error_context=error_context)
+        except (Pass1ParseError, Pass2ParseError, Pass3ParseError) as exc:
+            elapsed = asyncio.get_event_loop().time() - t0
+            if attempt == max_attempts - 1:
+                logger.error("[pipeline] pass%d attempt=%d PARSE_ERROR after %.1fs (no retries left): %s",
+                             pass_num, attempt + 1, elapsed, exc)
+                raise _PersistentFailure([{"type": "parse_error", "msg": str(exc)}])
+            logger.warning("[pipeline] pass%d attempt=%d PARSE_ERROR after %.1fs, retrying: %s",
+                           pass_num, attempt + 1, elapsed, exc)
+            error_context = f"Your previous response was not valid JSON. Error: {exc}. Return ONLY valid JSON."
+            continue
+        except Exception as exc:
+            elapsed = asyncio.get_event_loop().time() - t0
+            logger.error("[pipeline] pass%d attempt=%d LLM ERROR after %.1fs: %s: %s",
+                         pass_num, attempt + 1, elapsed, type(exc).__name__, exc)
+            raise
+
+        elapsed = asyncio.get_event_loop().time() - t0
 
         # Merge pass output into running schema
         candidate = copy.deepcopy(schema_ref)
@@ -172,14 +195,18 @@ async def _run_pass_with_retry(
         passes_to_rerun = validator.get_passes_to_rerun(vr)
 
         if pass_num not in passes_to_rerun:
+            logger.info("[pipeline] pass%d attempt=%d OK in %.1fs", pass_num, attempt + 1, elapsed)
             schema_ref.update(candidate)
             return schema_ref
 
         if attempt == max_attempts - 1:
+            logger.error("[pipeline] pass%d FAILED after %d attempts (%.1fs) hard_errors=%s",
+                         pass_num, max_attempts, elapsed, vr.hard_errors)
             raise _PersistentFailure(vr.hard_errors)
 
         error_context = validator.get_error_context(vr)
-        logger.info("pass %d attempt %d failed, retrying with error context", pass_num, attempt + 1)
+        logger.warning("[pipeline] pass%d attempt=%d validation failed in %.1fs, retrying | errors=%s",
+                       pass_num, attempt + 1, elapsed, vr.hard_errors)
 
     raise _PersistentFailure([])
 
@@ -234,6 +261,10 @@ async def run_extraction(
     from app.pattern_engine.importance_boost import apply_pattern_importance_boost
     from app.pattern_engine.injection_logger import log_injection
     from app.pattern_engine.pass3_injector import build_pass3_injection_block
+
+    t_pipeline_start = asyncio.get_event_loop().time()
+    logger.info("[pipeline] START decision_id=%s user_id=%s input_chars=%d resume_session=%s",
+                decision_id, user_id, len(user_input), session_id)
 
     validator = SchemaValidator()
     enricher = Enricher()
@@ -306,7 +337,10 @@ async def run_extraction(
         )
 
     except _PersistentFailure as exc:
+        elapsed = asyncio.get_event_loop().time() - t_pipeline_start
         failed_pass = _which_pass_failed(exc.hard_errors)
+        logger.error("[pipeline] FAILED pass%d after %.1fs total | hard_errors=%s",
+                     failed_pass, elapsed, exc.hard_errors)
         if settings.clarification_enabled:
             session_data = {
                 "partial_schema": copy.deepcopy(schema),
@@ -361,6 +395,16 @@ async def run_extraction(
         "consistency_report": consistency_report.model_dump(),
         "telemetry": TelemetrySummary(enrichment_applied=enrichment_ran).model_dump(),
     }
+
+    elapsed_total = asyncio.get_event_loop().time() - t_pipeline_start
+    confidence_val = result.get("confidence", {}).get("overall_confidence", 0)
+    logger.info("[pipeline] DONE decision_id=%s in %.1fs | category=%s confidence=%.2f vars=%d assumptions=%d risks=%d",
+                decision_id, elapsed_total,
+                result.get("decision_category", "?"),
+                confidence_val,
+                len(result.get("variables") or []),
+                len(result.get("assumptions") or []),
+                len(result.get("risks") or []))
 
     # Fire-and-forget memory write — never blocks the response
     if settings.memory_write_enabled and should_store(result):
