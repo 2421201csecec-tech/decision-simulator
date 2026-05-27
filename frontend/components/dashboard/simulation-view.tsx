@@ -662,6 +662,7 @@ export function SimulationView({ threadId, onBack }: SimulationViewProps) {
                 const set = (n: number) => setUserValues((prev) => ({ ...prev, [v.variable_id]: n }));
                 const isKeyDriver = keyVariableId === v.variable_id;
                 if (v.type === "categorical") {
+                  if (!v.possible_values?.length) return null;
                   return <VariableCategorical key={v.variable_id} variable={v} value={val} onChange={set} isKeyDriver={isKeyDriver} />;
                 }
                 if (v.type === "boolean") {

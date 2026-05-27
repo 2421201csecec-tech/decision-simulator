@@ -16,12 +16,12 @@ Generate a clear, specific decision verdict based on ALL the above — both the 
 STRICT RULES:
 - decisionTitle: 3-6 words, title case, professional — clean restatement of the decision being made (no typos, no vague phrasing, no raw user input)
 - finalDecision: one sentence, must name the recommended option explicitly, include specific numbers/timeframes from context
-- keyReasons: derived from what the founder said in their pressure test answers — not generic statements
-- keyRisks: specific to this decision context — reference actual risks from extraction or pressure test
-- assumptions: the 2-3 assumptions that MUST hold for this decision to work (from extraction schema)
+- keyReasons: 2-3 items, each 6-8 words max, derived from founder's pressure test answers — not generic
+- keyRisks: 2-3 items, each 6-8 words max, specific to this decision — no generic statements
+- assumptions: 2-3 items, each 6-8 words max — the assumptions that MUST hold for this to work
 - decisionStrength: integer 0-100 — higher if assumptions are well-tested and reasoning is clear; lower if many scenarios were skipped or answers were vague
-- strengths: what is genuinely strong about this decision approach based on the analysis
-- weakPoints: what remains untested or could break the decision — be specific
+- strengths: 2-3 items, each 6-8 words max — what is genuinely strong about this approach
+- weakPoints: 2-3 items, each 6-8 words max — what remains untested or could break this decision
 - suggestedExperiment: one concrete, actionable experiment (A/B test, pilot, specific metric to track) — must reference the actual decision context
 
 OUTPUT FORMAT — return ONLY a valid JSON object, no markdown, no explanation:

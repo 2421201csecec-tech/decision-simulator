@@ -56,6 +56,18 @@ class Enricher:
 
         enriched, audit = self._apply_non_destructive(original, enriched)
         self._validate_action_variable_map(enriched, original)
+
+        avm = enriched.get("action_variable_map", {})
+        logger.info(
+            "enrichment_complete avm_keys=%s avm_action_count=%d",
+            list(avm.keys()), len(avm),
+        )
+        if avm:
+            for aid, vars_map in avm.items():
+                logger.info("enrichment_avm action=%s var_count=%d vars=%s", aid, len(vars_map), list(vars_map.keys()))
+        else:
+            logger.warning("enrichment_avm_empty — simulation will produce identical curves for all actions")
+
         return enriched, audit
 
     def _apply_non_destructive(
@@ -109,11 +121,31 @@ class Enricher:
             logger.warning("enrichment did not produce action_variable_map")
             return
 
-        action_ids = {a.get("action_id") for a in original.get("actions", [])}
+        actions = original.get("actions", [])
+        action_ids = {a.get("action_id") for a in actions}
+
+        # Build label→id map for remapping when LLM used labels instead of IDs
+        label_to_id: dict[str, str] = {}
+        for a in actions:
+            aid = a.get("action_id", "")
+            label = a.get("label", "")
+            # "One-time purchase" → "one_time_purchase" and "one-time purchase"
+            label_to_id[label.lower().replace(" ", "_").replace("-", "_")] = aid
+            label_to_id[label.lower()] = aid
+
         bad_keys = set(avm.keys()) - action_ids
-        if bad_keys:
-            logger.warning(
-                "action_variable_map has unknown keys %s — removing them", bad_keys
-            )
-            for k in bad_keys:
+        remapped = 0
+        for k in list(bad_keys):
+            normalized = k.lower().replace(" ", "_").replace("-", "_")
+            target_id = label_to_id.get(normalized) or label_to_id.get(k.lower())
+            if target_id:
+                avm[target_id] = avm.pop(k)
+                remapped += 1
+            else:
                 del avm[k]
+
+        remaining_bad = set(avm.keys()) - action_ids
+        if remaining_bad:
+            logger.warning("action_variable_map dropped unknown keys %s", remaining_bad)
+        if remapped:
+            logger.info("action_variable_map remapped %d label-based keys to action_ids", remapped)

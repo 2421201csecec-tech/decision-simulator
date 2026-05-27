@@ -46,6 +46,11 @@ AFFECTS[] RULE:
 
 VARIABLE COUNT: aim for 5–12. Fewer is fine for simple decisions. Max 15.
 
+TYPE RULES — strictly enforced:
+- categorical: possible_values MUST be a non-empty list of 2–5 strings. Never leave it null or [].
+- boolean: range MUST be null. No range field.
+- continuous/ordinal/discrete: range MUST be [min, max] with both values as numbers — never null inside the array.
+
 DO NOT create two variables for the same concept.
 Examples of duplicates to avoid: "execution_quality" AND "delivery_quality", "revenue" AND "revenue_growth_rate" (pick one).
 

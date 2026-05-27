@@ -11,9 +11,10 @@ THREE REQUIRED ENRICHMENTS:
 1. action_variable_map — MANDATORY
    Build a map of each action to the specific values its key variables take under that action.
    Include ALL variables with importance "critical" or "high".
-   Use the variable_id (e.g. "var_revenue_growth"), not the name.
-   Use the midpoint of the range if the exact value is unknown.
-   Format: {{"action_id": {{"variable_id": value_or_midpoint}}}}
+   CRITICAL: Use the EXACT action_id string from actions[] (e.g. "a1", "a2") — NOT the label.
+   CRITICAL: Use the EXACT variable_id string from variables[] (e.g. "var_revenue_growth") — NOT the name.
+   Use the midpoint of the range if the exact value is unknown, but DIFFERENTIATE values across actions.
+   Format: {{"a1": {{"var_revenue_growth": 0.15, "var_churn_rate": 0.05}}, "a2": {{"var_revenue_growth": 0.08, "var_churn_rate": 0.03}}}}
 
 2. Confidence improvement
    For every variable where extraction_confidence < 0.60:
