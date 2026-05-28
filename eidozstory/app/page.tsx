@@ -136,11 +136,19 @@ export default function Home() {
   const [activeIndex, setActiveIndex] = useState(0)
   const [ctaActive, setCtaActive] = useState(false)
   const [heroVisible, setHeroVisible] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([])
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([])
   const ctaRef = useRef<HTMLDivElement | null>(null)
   const heroRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const root = scrollRef.current
@@ -192,8 +200,7 @@ export default function Home() {
         height: '64px',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 40px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        padding: isMobile ? '0 20px' : '0 40px',
         background: '#0a0a0a',
         zIndex: 20,
       }}>
@@ -211,18 +218,19 @@ export default function Home() {
             fontSize: '14px',
             letterSpacing: '0.3em',
             color: '#d4c8b8',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            fontFamily: 'var(--font-inter), Inter, sans-serif',
             fontWeight: 500,
           }}>
             EIDOZ
           </span>
         </div>
         <span style={{
-          fontSize: '22px',
-          letterSpacing: '0.12em',
+          fontSize: isMobile ? '13px' : '22px',
+          letterSpacing: isMobile ? '0.05em' : '0.12em',
           color: 'rgba(201,184,150,0.9)',
           fontFamily: 'Georgia, serif',
           fontStyle: 'italic',
+          marginRight: isMobile ? '0' : '120px',
         }}>
           Think Clearly, Decide Better.
         </span>
@@ -236,7 +244,7 @@ export default function Home() {
         width: '280px',
         flexShrink: 0,
         height: '100%',
-        display: 'flex',
+        display: isMobile ? 'none' : 'flex',
         flexDirection: 'column',
         opacity: (ctaActive || heroVisible) ? 0 : 1,
         transition: 'opacity 0.8s ease',
@@ -331,9 +339,10 @@ export default function Home() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '40px 80px 140px',
-          marginLeft: '-280px',
-          width: 'calc(100% + 280px)',
+          padding: isMobile ? '40px 24px 80px' : '40px 80px 140px',
+          marginLeft: isMobile ? '0' : '-280px',
+          width: isMobile ? '100%' : 'calc(100% + 280px)',
+          position: 'relative',
         }}>
           <p style={{
             fontSize: 'clamp(20px, 2.6vw, 30px)',
@@ -392,6 +401,7 @@ export default function Home() {
             index={i}
             slide={slide}
             active={activeIndex === i}
+            isMobile={isMobile}
           />
         ))}
 
@@ -402,9 +412,9 @@ export default function Home() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '80px',
-          marginLeft: '-280px',
-          width: 'calc(100% + 280px)',
+          padding: isMobile ? '60px 24px' : '80px',
+          marginLeft: isMobile ? '0' : '-280px',
+          width: isMobile ? '100%' : 'calc(100% + 280px)',
           borderTop: '1px solid rgba(201,184,150,0.1)',
         }}>
           <p style={{
@@ -482,7 +492,8 @@ const Section = forwardRef<HTMLDivElement, {
   index: number
   slide: typeof SLIDES[0]
   active: boolean
-}>(({ index, slide, active }, ref) => {
+  isMobile: boolean
+}>(({ index, slide, active, isMobile }, ref) => {
   return (
     <div
       ref={ref}
@@ -492,7 +503,7 @@ const Section = forwardRef<HTMLDivElement, {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '80px 80px',
+        padding: isMobile ? '60px 24px' : '80px 80px',
         borderBottom: '1px solid rgba(255,255,255,0.04)',
         opacity: active ? 1 : 0.35,
         transform: active ? 'translateY(0)' : 'translateY(12px)',
@@ -529,7 +540,7 @@ const Section = forwardRef<HTMLDivElement, {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '48px' }}>
         {(slide.body ?? []).map((para, j) => (
           <p key={j} style={{
-            fontSize: '20px',
+            fontSize: isMobile ? '17px' : '20px',
             lineHeight: 1.85,
             color: 'rgba(237,237,237,0.65)',
             fontFamily: 'Georgia, serif',
