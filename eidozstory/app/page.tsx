@@ -35,7 +35,7 @@ const SLIDES = [
     body: [
       '2am. A decision that cannot wait.',
       'Hire or delay. Launch or iterate. Raise or bootstrap. Pivot or hold.',
-      'You have advisors who disagree. Data that points both ways. A gut that has been wrong before. And the quiet, terrifying knowledge that this choice will compound — for years.',
+      'You have advisors who disagree. Data that points both ways. A gut that has been wrong before. And the quiet, terrifying knowledge that this choice will compound for years.',
     ],
     punch: 'This is the loneliest moment in building something.',
   },
@@ -50,7 +50,7 @@ const SLIDES = [
       'These are not failures of intelligence. They are failures of process.',
       'And process is something you can fix.',
     ],
-    punch: 'Name it. And suddenly — the fog lifts.',
+    punch: 'Name it. And suddenly the fog lifts.',
   },
   {
     id: 'clarify',
@@ -60,7 +60,7 @@ const SLIDES = [
       'Before you can decide well, you have to know what you\'re deciding.',
       'Most founders skip this. They carry hidden assumptions they never named. They optimise for the wrong outcome. They solve a symptom, not the problem.',
       'Eidoz begins before the options. Before the analysis.',
-      'It asks you one question at a time — until what seemed like a complex decision becomes a precise one.',
+      'It asks you one question at a time until what seemed like a complex decision becomes a precise one.',
       'Clarity is not a step. It is what makes every other step possible.',
     ],
     punch: 'Name it. Frame it. Own it.',
@@ -71,7 +71,7 @@ const SLIDES = [
     heading: 'The Second Act: Pressure',
     body: [
       'Socrates didn\'t give answers. He asked better questions.',
-      'The greatest philosophical tradition in human history was not about providing wisdom — it was about exposing the weakness in your own thinking.',
+      'The greatest philosophical tradition in human history was not about providing wisdom , it was about exposing the weakness in your own thinking.',
       'Eidoz runs your decision through structured pressure testing. Scenario by scenario. What if your core assumption breaks? What if the market moves? What if the hire doesn\'t work out?',
       'Not to paralyse you. To prepare you.',
     ],
@@ -85,7 +85,7 @@ const SLIDES = [
       'Everything you structured. Every assumption you named. Every pressure scenario you answered.',
       'Eidoz synthesises it into one verdict —',
       'The recommended path. The reasons it holds. The risks that must be watched. The single experiment that would prove your thesis before you go all in.',
-      'It doesn\'t decide for you. It shows you what you actually think — and whether that thinking holds.',
+      'It doesn\'t decide for you. It shows you what you actually think and whether that thinking holds.',
     ],
     punch: 'The verdict is yours. The clarity is Eidoz\'s.',
   },
@@ -96,7 +96,7 @@ const SLIDES = [
     body: [
       '10,000 simulated futures. Each one built from your actual variables — your runway, your conversion rate, your burn.',
       'Some futures are good. Some are fatal. Most are somewhere in between.',
-      'Eidoz shows you the distribution — not to tell you what will happen, but to show you what you\'re betting on when you make this decision.',
+      'Eidoz shows you the distribution not to tell you what will happen, but to show you what you\'re betting on when you make this decision.',
       'Uncertainty doesn\'t disappear. It becomes visible.',
     ],
     punch: 'And visible uncertainty is something you can act on.',
@@ -110,8 +110,8 @@ const SLIDES = [
       'You have patterns. Every founder does. The way you over-index on speed. The way you avoid the hard conversation. The way you convince yourself the risk is smaller than it is.',
       'These patterns don\'t announce themselves. They show up in your answers. In what you skip. In what you never question.',
       'Eidoz watches.',
-      'Across every decision you make, it builds a map of your thinking — your blind spots, your recurring assumptions, your untested beliefs.',
-      'Not to judge you. To show you what no advisor can — the shape of your own mind under pressure.',
+      'Across every decision you make, it builds a map of your thinking your blind spots, your recurring assumptions, your untested beliefs.',
+      'Not to judge you. To show you what no advisor can the shape of your own mind under pressure.',
     ],
     punch: 'The best founders don\'t just make better decisions. They become better decision-makers.',
   },
@@ -124,7 +124,7 @@ const SLIDES = [
       'Some of them you will get right. Some of them you will get wrong.',
       'The question is not whether you will make mistakes. The question is whether you will make the same ones twice.',
       'Whether you will carry the same blind spots into the next decision, and the one after that.',
-      'Eidoz exists for one reason —',
+      'Eidoz exists for one reason',
       'To make sure that when you look back at the decisions you made, you can say:',
       'I thought it through. I tested my assumptions. I knew what I was risking.',
     ],
@@ -197,7 +197,7 @@ export default function Home() {
         background: '#0a0a0a',
         zIndex: 20,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
           <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '36px', height: '36px' }}>
             <circle cx="20" cy="20" r="16" stroke="url(#lg)" strokeWidth="2" strokeLinecap="round" strokeDasharray="85 15" transform="rotate(-90 20 20)" />
             <defs>
@@ -217,6 +217,15 @@ export default function Home() {
             EIDOZ
           </span>
         </div>
+        <span style={{
+          fontSize: '22px',
+          letterSpacing: '0.12em',
+          color: 'rgba(201,184,150,0.9)',
+          fontFamily: 'Georgia, serif',
+          fontStyle: 'italic',
+        }}>
+          Think Clearly, Decide Better.
+        </span>
       </div>
 
       {/* CONTENT ROW — left chain + right scroll */}
@@ -337,40 +346,40 @@ export default function Home() {
           }}>
             <span
               onClick={() => scrollTo(0)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >History</span> has always demanded decisions but <span
               onClick={() => scrollTo(1)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >navigating</span> through them has never been harder.
             When everything <span
               onClick={() => scrollTo(2)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >falls apart</span> and fog clouds your <span
               onClick={() => scrollTo(3)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >process</span>. <span
               onClick={() => scrollTo(4)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >Clarity</span> becomes your first act of courage,
             you <span
               onClick={() => scrollTo(5)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >pressure-test</span> your assumptions, deliver a <span
               onClick={() => scrollTo(6)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >verdict</span>, run a <span
               onClick={() => scrollTo(7)}
-              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+              style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
             >simulation</span> on how you actually think
             not how you wish you did.
             <br /><br />
             <span style={{ color: 'rgba(201,184,150,0.9)', fontStyle: 'normal', letterSpacing: '0.04em' }}>
               Eidoz is not a <span
                 onClick={() => scrollTo(8)}
-                style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+                style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
               >feature</span>. Eidoz is the <span
                 onClick={() => scrollTo(9)}
-                style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.9)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,0.95)', textShadow: '0 0 18px rgba(201,184,150,0.6), 0 0 40px rgba(201,184,150,0.25)' }}
+                style={{ textDecoration: 'underline', textDecorationColor: 'rgba(201,184,150,0.8)', textUnderlineOffset: '5px', textDecorationThickness: '1px', cursor: 'pointer', color: 'rgba(201,184,150,1)' }}
               >necessity</span>.
             </span>
           </p>
@@ -436,26 +445,29 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              padding: '18px 56px',
-              border: '1px solid rgba(201,184,150,0.5)',
-              color: 'rgba(201,184,150,1)',
-              fontSize: '18px',
-              letterSpacing: '0.15em',
+              padding: '16px 52px',
+              border: 'none',
+              color: '#0a0a0a',
+              fontSize: '15px',
+              letterSpacing: '0.2em',
               textDecoration: 'none',
-              fontFamily: 'Georgia, serif',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              fontWeight: 600,
               transition: 'all 0.3s ease',
-              background: 'rgba(201,184,150,0.04)',
+              background: 'linear-gradient(135deg, rgba(201,184,150,1) 0%, rgba(212,200,184,1) 50%, rgba(180,162,130,1) 100%)',
+              borderRadius: '2px',
+              boxShadow: '0 4px 24px rgba(201,184,150,0.25), 0 1px 4px rgba(0,0,0,0.4)',
             }}
             onMouseEnter={e => {
-              (e.target as HTMLAnchorElement).style.background = 'rgba(201,184,150,0.12)'
-              ;(e.target as HTMLAnchorElement).style.borderColor = 'rgba(201,184,150,0.9)'
+              (e.target as HTMLAnchorElement).style.boxShadow = '0 6px 32px rgba(201,184,150,0.45), 0 2px 8px rgba(0,0,0,0.4)'
+              ;(e.target as HTMLAnchorElement).style.transform = 'translateY(-1px)'
             }}
             onMouseLeave={e => {
-              (e.target as HTMLAnchorElement).style.background = 'rgba(201,184,150,0.04)'
-              ;(e.target as HTMLAnchorElement).style.borderColor = 'rgba(201,184,150,0.5)'
+              (e.target as HTMLAnchorElement).style.boxShadow = '0 4px 24px rgba(201,184,150,0.25), 0 1px 4px rgba(0,0,0,0.4)'
+              ;(e.target as HTMLAnchorElement).style.transform = 'translateY(0)'
             }}
           >
-            eidoz.com
+            GET STARTED
           </a>
         </div>
       </div>
