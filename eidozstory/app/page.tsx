@@ -92,7 +92,7 @@ const SLIDES = [
   {
     id: 'simulation2',
     label: 'Simulation',
-    heading: 'What if you could see the future — not as a prediction, but as a landscape?',
+    heading: 'What if you could see the future not as a prediction, but as a landscape?',
     body: [
       '10,000 simulated futures. Each one built from your actual variables — your runway, your conversion rate, your burn.',
       'Some futures are good. Some are fatal. Most are somewhere in between.',
@@ -225,11 +225,12 @@ export default function Home() {
           </span>
         </div>
         <span style={{
-          fontSize: isMobile ? '13px' : '22px',
-          letterSpacing: isMobile ? '0.05em' : '0.12em',
-          color: 'rgba(201,184,150,0.9)',
+          fontSize: isMobile ? '13px' : '20px',
+          letterSpacing: isMobile ? '0.04em' : '0.08em',
+          color: 'rgba(201,184,150,0.85)',
           fontFamily: 'Georgia, serif',
-          fontStyle: 'italic',
+          fontStyle: 'normal',
+          fontWeight: 400,
           marginRight: isMobile ? '0' : '120px',
         }}>
           Think Clearly, Decide Better.
