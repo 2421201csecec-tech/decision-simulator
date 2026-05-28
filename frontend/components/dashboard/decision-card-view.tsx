@@ -183,15 +183,15 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
           <p className="text-sm" style={{ color: 'rgba(201,184,150,0.5)' }}>Loading decision…</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto px-4 md:px-8 py-10 decision-card-scroll">
-          <div className="min-w-[1200px] w-full max-w-7xl mx-auto">
+        <div className="flex-1 overflow-auto px-4 md:px-6 py-4 decision-card-scroll">
+          <div className="w-full max-w-7xl mx-auto">
             {/* ── Tree card ── */}
             <div
               ref={cardRef}
               className="relative w-full rounded-3xl border"
               style={{ borderColor: 'rgba(201,184,150,0.15)', background: '#120d08' }}
             >
-            <div className="relative px-10 pt-16 pb-10 flex flex-col">
+            <div className="relative px-6 pt-10 pb-6 flex flex-col">
               {/* Title + subheading — top left */}
               <div className="absolute top-5 left-6">
                 <h1 className="text-xl font-bold" style={{ color: '#f0d898' }}>Decision Card</h1>
@@ -216,7 +216,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
               <div className="flex justify-center">
                 <div
                   className="rounded-2xl border px-6 py-3 text-center"
-                  style={{ background: '#1a1610', borderColor: 'rgba(201,184,150,0.85)', borderWidth: '2.5px', boxShadow: '0 0 18px rgba(201,184,150,0.35), 0 0 40px rgba(201,184,150,0.15)', minWidth: '28%', maxWidth: '40%' }}
+                  style={{ background: '#1a1610', borderColor: 'rgba(201,184,150,0.85)', borderWidth: '2.5px', boxShadow: '0 0 8px rgba(201,184,150,0.15), 0 0 18px rgba(201,184,150,0.06)', minWidth: '28%', maxWidth: '40%' }}
                 >
                   <h2 className="uppercase font-bold mb-1" style={{ fontSize: '0.75rem', letterSpacing: '0.15em', color: '#c9b896', textShadow: '0 0 6px rgba(201,184,150,0.4)' }}>Decision Title</h2>
                   <p className="text-xl font-semibold" style={{ color: '#f0d898', fontFamily: 'var(--font-serif)', textShadow: '0 0 12px rgba(201,184,150,0.7), 0 0 28px rgba(201,184,150,0.35)' }}>{title}</p>
@@ -224,7 +224,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
               </div>
 
               {/* Connector: title → 3 boxes */}
-              <div className="relative" style={{ height: 70, marginTop: -1, zIndex: 2 }}>
+              <div className="relative" style={{ height: 44, marginTop: -1, zIndex: 2 }}>
                 <div className="absolute" style={{ left: '50%', top: 0, width: 2, height: '100%', background: 'rgba(201,184,150,0.5)', transform: 'translateX(-50%)' }} />
                 <div className="absolute" style={{ left: '17%', right: '17%', top: '50%', height: 2, background: 'rgba(201,184,150,0.4)', transform: 'translateY(-50%)' }} />
                 <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 5, height: 5, borderRadius: '50%', background: '#c9b896', boxShadow: '0 0 6px rgba(201,184,150,0.8)', zIndex: 3 }} />
@@ -277,7 +277,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
                   },
                 ]
                 return (
-                  <div className="grid grid-cols-3 gap-10" style={{ padding: '0 4%' }}>
+                  <div className="grid grid-cols-3 gap-5" style={{ padding: '0 2%' }}>
                     {cols.map((col, i) => (
                       <div key={i} style={{ position: 'relative' }}>
                         {/* drop line + dot from title connector */}
@@ -288,7 +288,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
                         <Node label={col.label} accent={col.accent} icon={col.icon} />
 
                         {/* Mini 3-branch connector going down */}
-                        <div style={{ position: 'relative', height: 90 }}>
+                        <div style={{ position: 'relative', height: 55 }}>
                           <div style={{ position: 'absolute', left: '50%', top: 0, width: 2, height: '100%', background: 'rgba(201,184,150,0.5)', transform: 'translateX(-50%)' }} />
                           <div style={{ position: 'absolute', left: '8%', right: '8%', top: '50%', height: 2, background: 'rgba(201,184,150,0.4)', transform: 'translateY(-50%)' }} />
                           <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 5, height: 5, borderRadius: '50%', background: '#c9b896', boxShadow: '0 0 6px rgba(201,184,150,0.8)' }} />
@@ -300,9 +300,9 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
                         <div className="grid grid-cols-3 gap-3">
                           {[0, 1, 2].map(j => (
                             <div key={j} style={{ position: 'relative' }}>
-                              <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: -38, height: 38, width: 2, background: 'rgba(201,184,150,0.4)', zIndex: 4 }} />
+                              <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', top: -24, height: 24, width: 2, background: 'rgba(201,184,150,0.4)', zIndex: 4 }} />
                               <div style={{ position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)', width: 5, height: 5, borderRadius: '50%', background: '#c9b896', boxShadow: '0 0 6px rgba(201,184,150,0.8)', zIndex: 5 }} />
-                              <div className="rounded-xl border flex flex-col items-center gap-2" style={{ height: 130, padding: '12px 10px 10px', background: '#1a1610', borderColor: col.border, borderWidth: '1.5px', boxShadow: col.subGlow, overflow: 'hidden' }}>
+                              <div className="rounded-xl border flex flex-col items-center gap-1.5" style={{ minHeight: 100, padding: '8px 8px 8px', background: '#1a1610', borderColor: col.border, borderWidth: '1.5px', boxShadow: col.subGlow }}>
                                 <div className="flex items-center justify-center w-10 h-10 rounded-full shrink-0" style={{ background: 'rgba(201,184,150,0.1)', border: '1px solid rgba(201,184,150,0.35)', boxShadow: '0 0 8px rgba(201,184,150,0.15)' }}>
                                   {col.subIcons[j]}
                                 </div>
@@ -318,16 +318,16 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
               })()}
 
               {/* connector line in the gap between sub-boxes and Final Verdict */}
-              <div style={{ position: 'relative', height: 80, display: 'flex', justifyContent: 'center' }}>
+              <div style={{ position: 'relative', height: 44, display: 'flex', justifyContent: 'center' }}>
                 <div style={{ width: 2, height: '100%', background: 'rgba(201,184,150,0.5)' }} />
               </div>
 
               {/* Final Verdict */}
               <div className="flex justify-center mb-8">
-                <div className="rounded-2xl border flex flex-col items-center gap-2 text-center" style={{ position: 'relative', background: '#1a1610', borderColor: 'rgba(201,184,150,0.85)', borderWidth: '2.5px', boxShadow: '0 0 18px rgba(201,184,150,0.35), 0 0 40px rgba(201,184,150,0.15)', padding: '1.25rem 1.5rem', minWidth: '45%', maxWidth: '55%' }}>
+                <div className="rounded-2xl border flex flex-col items-center gap-2 text-center" style={{ position: 'relative', background: '#1a1610', borderColor: 'rgba(201,184,150,0.85)', borderWidth: '2.5px', boxShadow: '0 0 8px rgba(201,184,150,0.15), 0 0 18px rgba(201,184,150,0.06)', padding: '1.25rem 1.5rem', minWidth: '45%', maxWidth: '55%' }}>
                   <div style={{ position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%)', width: 7, height: 7, borderRadius: '50%', background: '#c9b896', boxShadow: '0 0 7px rgba(201,184,150,0.9)', zIndex: 5 }} />
                   <p className="text-sm font-semibold uppercase tracking-widest" style={{ color: '#e0c97a', textShadow: '0 0 8px rgba(224,201,122,0.9), 0 0 20px rgba(201,184,150,0.5)' }}>Final Verdict</p>
-                  <p className="text-xl font-semibold leading-relaxed" style={{ color: '#f0d898', fontFamily: 'var(--font-serif)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textShadow: '0 0 12px rgba(240,216,152,0.6), 0 0 28px rgba(201,184,150,0.3)' }}>{finalDecision}</p>
+                  <p className="text-xl font-semibold leading-relaxed" style={{ color: '#f0d898', fontFamily: 'var(--font-serif)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textShadow: '0 0 12px rgba(240,216,152,0.6), 0 0 28px rgba(201,184,150,0.3)', paddingBottom: '2px' }}>{finalDecision}</p>
                 </div>
               </div>
 
@@ -342,7 +342,7 @@ const rawTitle = decision?.decisionTitle || draft?.title || 'Untitled Decision'
           </div>
 
           {/* Download button */}
-          <div className="flex items-center justify-center mt-6 pb-4">
+          <div className="flex items-center justify-center mt-3 pb-3">
             <button
               onClick={handleDownload}
               disabled={downloading}

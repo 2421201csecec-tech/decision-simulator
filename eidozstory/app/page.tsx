@@ -83,7 +83,7 @@ const SLIDES = [
     heading: 'Not a recommendation. A reckoning.',
     body: [
       'Everything you structured. Every assumption you named. Every pressure scenario you answered.',
-      'Eidoz synthesises it into one verdict —',
+      'Eidoz synthesises it into one verdict',
       'The recommended path. The reasons it holds. The risks that must be watched. The single experiment that would prove your thesis before you go all in.',
       'It doesn\'t decide for you. It shows you what you actually think and whether that thinking holds.',
     ],
@@ -94,7 +94,7 @@ const SLIDES = [
     label: 'Simulation',
     heading: 'What if you could see the future not as a prediction, but as a landscape?',
     body: [
-      '10,000 simulated futures. Each one built from your actual variables — your runway, your conversion rate, your burn.',
+      '10,000 simulated variables. Each one built from your actual decision your runway, your conversion rate, your burn.',
       'Some futures are good. Some are fatal. Most are somewhere in between.',
       'Eidoz shows you the distribution not to tell you what will happen, but to show you what you\'re betting on when you make this decision.',
       'Uncertainty doesn\'t disappear. It becomes visible.',

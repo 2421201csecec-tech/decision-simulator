@@ -367,7 +367,7 @@ export default function Dashboard() {
           onClick={() => setDecisionCardModalThreadId(null)}
         >
           <div
-            className="relative w-[calc(100vw-640px)] min-w-[600px] max-h-[90vh] overflow-y-auto rounded-2xl border border-border/50 bg-card"
+            className="relative w-[calc(100vw-160px)] max-w-[1400px] h-[92vh] overflow-hidden rounded-2xl border border-border/50 bg-card"
             onClick={(e) => e.stopPropagation()}
           >
             <DecisionCardView
