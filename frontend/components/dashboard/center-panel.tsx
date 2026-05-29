@@ -156,6 +156,7 @@ export function CenterPanel({ view, selectedThreadId, onStartDecision, onBack, o
 
         {/* CTA Button */}
         <button
+          id="tour-start-btn"
           onClick={onStartDecision}
           className="mt-4 px-8 py-3 bg-[#d4bf96] text-[#1a1816] rounded-full text-base font-semibold hover:bg-[#deca9f] transition-colors shadow-lg shadow-[#c9b896]/40"
         >

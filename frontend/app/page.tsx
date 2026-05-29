@@ -7,6 +7,8 @@ import { CenterPanel } from "@/components/dashboard/center-panel";
 import { RightPanel } from "@/components/dashboard/right-panel";
 import DecisionCardView from "@/components/dashboard/decision-card-view";
 import { cn } from "@/lib/utils";
+import { startTour } from "@/hooks/use-onboarding-tour";
+import 'driver.js/dist/driver.css';
 import {
   createThread,
   fetchClarifyDraft,
@@ -274,7 +276,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Fixed Top Navigation */}
-      <TopNav onLogoClick={handleLogoClick} />
+      <TopNav onLogoClick={handleLogoClick} onStartTour={() => startTour(view)} />
 
       {/* Main Content Area with 3 Panels */}
       <div className="pt-16 h-screen">
@@ -288,6 +290,7 @@ export default function Dashboard() {
         <div className="h-full p-4 flex gap-4">
           {/* Left Panel - Navigation */}
           <div
+            id="tour-left-panel"
             className={cn(
               "transition-all duration-300 ease-in-out",
               leftCollapsed ? "w-10" : "w-72"
@@ -312,6 +315,7 @@ export default function Dashboard() {
           </div>
 
           {/* Center Panel - Main Canvas */}
+          <div id="tour-center-panel" className="flex-1 min-w-0">
           <CenterPanel
             view={view}
             selectedThreadId={selectedThreadId}
@@ -333,9 +337,11 @@ export default function Dashboard() {
             onPressureAnswerChange={setPressureTestAnswer}
             onFailureRawInputChange={setFailureRawInput}
           />
+          </div>
 
           {/* Right Panel - AI Insights */}
           <div
+            id="tour-right-panel"
             className={cn(
               "transition-all duration-300 ease-in-out",
               rightCollapsed ? "w-10" : "w-80"

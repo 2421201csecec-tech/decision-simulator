@@ -391,7 +391,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
       </div>
 
       {/* Progress Bar */}
-      <div className="mb-8">
+      <div id="tour-pt-progress" className="mb-8">
         <div className="h-1 bg-secondary rounded-full overflow-hidden">
           <div
             className="h-full bg-accent transition-all duration-300 ease-out rounded-full"
@@ -408,6 +408,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
         </div>
 
         <div
+          id="tour-pt-scenario"
           className="mb-4 rounded-xl p-6 mx-[-2rem]"
           style={{
             background: 'rgba(255,255,255,0.03)',
@@ -431,7 +432,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
           <p className="text-base text-foreground/70 leading-relaxed">{v1Scenario!.question}</p>
         </div>
 
-        <div className="space-y-2 mb-6">
+        <div id="tour-pt-answer" className="space-y-2 mb-6">
           <textarea
             value={answer}
             onChange={handleAnswerChange}
@@ -444,7 +445,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-8 flex-wrap">
+        <div id="tour-pt-hints" className="flex items-center gap-3 mb-8 flex-wrap">
           <div className="flex items-center gap-2 text-accent">
             <Lightbulb className="w-4 h-4" />
             <span className="text-sm">Think about:</span>
@@ -459,7 +460,7 @@ export function PressureTest({ threadId, onBack, onSubmitFinal, onStateChange, o
           ))}
         </div>
 
-        <div className="flex items-center justify-between pt-4 pb-6">
+        <div id="tour-pt-actions" className="flex items-center justify-between pt-4 pb-6">
           <button
             onClick={handleSkipV1}
             disabled={submitting}

@@ -342,7 +342,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
       {/* Form */}
       <div className="flex-1 space-y-7 max-w-2xl mx-auto w-full">
         {/* Decision Title */}
-        <div className="space-y-2">
+        <div id="tour-clarify-title" className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Decision Title</label>
           <div className="relative">
             <input
@@ -364,7 +364,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
         </div>
 
         {/* Core Problem */}
-        <div className="space-y-2">
+        <div id="tour-clarify-problem" className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Core Problem</label>
           <div className="relative">
             <textarea
@@ -386,7 +386,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
         </div>
 
         {/* Context */}
-        <div className="space-y-2">
+        <div id="tour-clarify-context" className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>
             Context <span className="normal-case tracking-normal font-normal ml-1" style={{ color: 'var(--muted-foreground)', opacity: 0.6 }}>· optional</span>
           </label>
@@ -410,7 +410,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
         </div>
 
         {/* Constraints */}
-        <div className="space-y-2">
+        <div id="tour-clarify-constraints" className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Constraints</label>
           {constraints.map((constraint, index) => (
             <div
@@ -465,7 +465,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
         </div>
 
         {/* Assumptions */}
-        <div className="space-y-2">
+        <div id="tour-clarify-assumptions" className="space-y-2">
           <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#ddd0b0' }}>Assumptions</label>
           {assumptions.map((assumption, index) => (
             <div
@@ -520,7 +520,7 @@ export function ClarifyForm({ threadId, onBack, onContinue, onAutosave, autosave
         </div>
 
         {/* Continue Button */}
-        <div className="flex justify-end pt-4 pb-6">
+        <div id="tour-clarify-continue" className="flex justify-end pt-4 pb-6">
           <button
             onClick={() => {
               if (threadId && !preGeneratedRef.current) {

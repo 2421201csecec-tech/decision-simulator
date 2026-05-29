@@ -16,6 +16,7 @@ import { NotificationBell } from "./notification-bell";
 
 interface TopNavProps {
   onLogoClick?: () => void;
+  onStartTour?: () => void;
 }
 
 function EidozLogo({ className = "" }: { className?: string }) {
@@ -53,7 +54,7 @@ function EidozLogo({ className = "" }: { className?: string }) {
   );
 }
 
-export function TopNav({ onLogoClick }: TopNavProps) {
+export function TopNav({ onLogoClick, onStartTour }: TopNavProps) {
   const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -113,6 +114,18 @@ export function TopNav({ onLogoClick }: TopNavProps) {
               <span>Guest mode</span>
               <span style={{ color: 'rgba(201,184,150,0.6)' }}>·</span>
               <span>Save data →</span>
+            </button>
+          )}
+
+          {onStartTour && (
+            <button
+              onClick={onStartTour}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+              style={{ background: 'rgba(201,184,150,0.06)', border: '1px solid rgba(201,184,150,0.2)', color: 'rgba(201,184,150,0.7)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(201,184,150,0.12)'; e.currentTarget.style.color = '#c9b896' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(201,184,150,0.06)'; e.currentTarget.style.color = 'rgba(201,184,150,0.7)' }}
+            >
+              Take a tour
             </button>
           )}
 

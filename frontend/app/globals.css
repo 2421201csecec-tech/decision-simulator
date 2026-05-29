@@ -220,3 +220,62 @@
   background: linear-gradient(90deg, transparent, rgba(201,184,150,0.35), transparent);
   animation: shimmer-sweep 2.4s ease-in-out infinite;
 }
+
+/* ── Driver.js tour — Eidoz dark gold theme ── */
+.eidoz-tour-popover.driver-popover {
+  background: #1a1610;
+  border: 1.5px solid rgba(201,184,150,0.4);
+  border-radius: 14px;
+  box-shadow: 0 0 32px rgba(0,0,0,0.7), 0 0 16px rgba(201,184,150,0.08);
+  padding: 20px 22px 16px;
+  max-width: 300px;
+}
+.eidoz-tour-popover .driver-popover-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f0d898;
+  letter-spacing: 0.03em;
+  margin-bottom: 6px;
+}
+.eidoz-tour-popover .driver-popover-description {
+  font-size: 0.82rem;
+  color: rgba(201,184,150,0.75);
+  line-height: 1.55;
+}
+.eidoz-tour-popover .driver-popover-progress-text {
+  font-size: 0.72rem;
+  color: rgba(201,184,150,0.4);
+}
+.eidoz-tour-popover .driver-popover-footer {
+  margin-top: 14px;
+  gap: 8px;
+}
+.eidoz-tour-popover .driver-popover-next-btn,
+.eidoz-tour-popover .driver-popover-prev-btn,
+.eidoz-tour-popover .driver-popover-done-btn {
+  background: rgba(201,184,150,0.12);
+  border: 1px solid rgba(201,184,150,0.3);
+  color: #c9b896;
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-shadow: none;
+}
+.eidoz-tour-popover .driver-popover-next-btn:hover,
+.eidoz-tour-popover .driver-popover-done-btn:hover {
+  background: rgba(201,184,150,0.22);
+  border-color: rgba(201,184,150,0.6);
+}
+.eidoz-tour-popover .driver-popover-close-btn {
+  color: rgba(201,184,150,0.4);
+  font-size: 1.1rem;
+}
+.eidoz-tour-popover .driver-popover-close-btn:hover {
+  color: #c9b896;
+}
+.driver-popover-arrow {
+  border-color: rgba(201,184,150,0.4) !important;
+}
