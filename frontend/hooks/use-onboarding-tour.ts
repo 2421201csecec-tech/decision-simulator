@@ -27,7 +27,7 @@ const CLARIFY_STEPS: DriveStep[] = [
     element: '#tour-clarify-title',
     popover: {
       title: 'Decision Title',
-      description: 'Name what you are deciding. Be specific — a vague title leads to vague thinking.',
+      description: 'Name what you are deciding. Be specific, a vague title leads to vague thinking.',
       side: 'bottom',
       align: 'start',
     },
@@ -36,7 +36,7 @@ const CLARIFY_STEPS: DriveStep[] = [
     element: '#tour-clarify-problem',
     popover: {
       title: 'Core Problem',
-      description: "What's really going on here? Dig deeper than the surface — the real problem is usually one level below the obvious one.",
+      description: "What's really going on here? Dig deeper than the surface. The real problem is usually one level below the obvious one.",
       side: 'bottom',
       align: 'start',
     },
@@ -45,7 +45,7 @@ const CLARIFY_STEPS: DriveStep[] = [
     element: '#tour-clarify-context',
     popover: {
       title: 'Context',
-      description: 'Any background that shapes this decision — team size, past attempts, market conditions. Optional but powerful.',
+      description: 'Any background that shapes this decision: team size, past attempts, market conditions. Optional but powerful.',
       side: 'top',
       align: 'start',
     },
@@ -102,7 +102,7 @@ const PRESSURE_TEST_STEPS: DriveStep[] = [
     element: '#tour-pt-scenario',
     popover: {
       title: 'The Scenario',
-      description: 'A hypothetical situation designed to challenge your decision. Read it carefully — it is testing your assumptions.',
+      description: 'A hypothetical situation designed to challenge your decision. Read it carefully, it is testing your assumptions.',
       side: 'bottom',
       align: 'center',
     },
